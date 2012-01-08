@@ -1,0 +1,63 @@
+src = $(wildcard src/*.c)
+hdr = src/track.h src/anim.h src/config.h
+obj = $(src:.c=.o)
+dep = $(obj:.o=.d)
+lib_a = libanim.a
+
+ifeq ($(shell uname -s), Darwin)
+	lib_so = anim.dylib
+	shared = -dynamiclib
+else
+	somajor = 0
+	sominor = 1
+	soname = libanim.so.$(somajor)
+	lib_so = $(soname).$(sominor)
+	solink = libanim.so
+	shared = -shared -Wl,-soname,$(soname)
+endif
+
+
+CC = gcc
+AR = ar
+CFLAGS = $(opt) $(dbg) -pedantic -Wall -fPIC -I$(PREFIX)/include
+LDFLAGS = -L$(PREFIX)/lib -lvmath -lm -lpthread
+
+.PHONY: all
+all: $(lib_a) $(lib_so)
+
+$(lib_a): $(obj)
+	$(AR) rcs $@ $(obj)
+
+$(lib_so): $(obj)
+	$(CC) $(shared) -o $@ $(obj) $(LDFLAGS)
+
+-include $(dep)
+
+%.d: %.c
+	@$(CPP) $(CFLAGS) $< -MM -MT $(@:.d=.o) >$@
+
+.PHONY: install
+install: $(lib_a) $(lib_so)
+	mkdir -p $(PREFIX)/lib $(PREFIX)/include/anim
+	cp $(lib_a) $(PREFIX)/lib/$(lib_a)
+	cp $(lib_so) $(PREFIX)/lib/$(lib_so)
+	[ -n "$(solink)" ] && rm -f $(PREFIX)/lib/$(soname) $(PREFIX)/lib/$(solink) \
+		&& ln -s $(PREFIX)/lib/$(lib_so) $(PREFIX)/lib/$(soname) \
+		&& ln -s $(PREFIX)/lib/$(soname) $(PREFIX)/lib/$(solink) \
+		|| true
+	cp $(hdr) $(PREFIX)/include/anim/
+
+.PHONY: uninstall
+uninstall:
+	rm -f $(PREFIX)/lib/$(lib_a)
+	rm -f $(PREFIX)/lib/$(lib_so)
+	rm -f $(PREFIX)/include/anim/*.h
+	rmdir $(PREFIX)/include/anim
+
+.PHONY: clean
+clean:
+	rm -f $(obj) $(lib_so) $(lib_a)
+
+.PHONY: distclean
+distclean: clean
+	rm -f Makefile
