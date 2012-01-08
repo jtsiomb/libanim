@@ -1,0 +1,7 @@
+\.d$
+\.o$
+\.swp$
+^libanim.a$
+^libanim.so
+^libanim.dylib
+^Makefile$

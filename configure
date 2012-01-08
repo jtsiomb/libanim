@@ -1,0 +1,85 @@
+#!/bin/sh
+
+PREFIX=/usr/local
+OPT=yes
+DBG=yes
+PTHREAD=no
+
+config_h=src/config.h
+
+#echo "configuring libanim $VERSION ..."
+
+for arg; do
+	case "$arg" in
+	--prefix=*)
+		value=`echo $arg | sed 's/--prefix=//'`
+		PREFIX=${value:-$prefix}
+		;;
+	
+	--enable-opt)
+		OPT=yes;;
+	--disable-opt)
+		OPT=no;;
+
+	--enable-debug)
+		DBG=yes;;
+	--disable-debug)
+		DBG=no;;
+
+	--thread-safe)
+		PTHREAD=yes;;
+	--thread-unsafe)
+		PTHREAD=no;;
+
+	--help)
+		echo 'usage: ./configure [options]'
+		echo 'options:'
+		echo '  --prefix=<path>: installation path (default: /usr/local)'
+		echo '  --enable-opt: enable speed optimizations (default)'
+		echo '  --disable-opt: disable speed optimizations'
+		echo '  --enable-debug: include debugging symbols (default)'
+		echo '  --disable-debug: do not include debugging symbols'
+		echo '  --thread-safe: protect concurrent access to matrix cache'
+		echo '  --thread-unsafe: assume only single-threaded operation (default)'
+		echo 'all invalid options are silently ignored'
+		exit 0
+		;;
+	esac
+done
+
+echo "prefix: $PREFIX"
+echo "optimize for speed: $OPT"
+echo "include debugging symbols: $DBG"
+
+echo 'creating makefile ...'
+echo "PREFIX = $PREFIX" >Makefile
+if [ "$DBG" = 'yes' ]; then
+	echo 'dbg = -g' >>Makefile
+fi
+if [ "$OPT" = 'yes' ]; then
+	echo 'opt = -O3' >>Makefile
+fi
+if [ "$PTHREAD" = yes ]; then
+	echo 'pthr = -lpthread' >>Makefile
+fi
+
+cat Makefile.in >>Makefile
+
+echo 'creating config.h ...'
+echo '#ifndef ANIM_CONFIG_H_' >src/config.h
+echo '#define ANIM_CONFIG_H_' >>src/config.h
+echo >>src/config.h
+if [ "$PTHREAD" = yes ]; then
+	echo '#define ANIM_THREAD_SAFE' >>src/config.h
+else
+	echo '#undef ANIM_THREAD_SAFE' >>src/config.h
+fi
+echo >>src/config.h
+echo '#endif	/* ANIM_CONFIG_H_ */'>>src/config.h
+
+#echo 'creating pkg-config file ...'
+#echo "prefix=$PREFIX" >vmath.pc
+#echo "ver=$VERSION" >>vmath.pc
+#cat vmath.pc.in >>vmath.pc
+
+echo 'configuration completed, type make (or gmake) to build.'
