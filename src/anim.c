@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <limits.h>
 #include <assert.h>
 #include "anim.h"

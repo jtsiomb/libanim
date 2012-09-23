@@ -5,7 +5,9 @@
 
 #include <pthread.h>
 
-#include <vmath/vmath.h>
+#include <vmath/vector.h>
+#include <vmath/quat.h>
+#include <vmath/matrix.h>
 #include "track.h"
 
 enum {
