@@ -67,6 +67,27 @@ void anm_free_track(struct anm_track *track)
 	free(track);
 }
 
+void anm_copy_track(struct anm_track *dest, struct anm_track *src)
+{
+	free(dest->name);
+	if(dest->keys) {
+		dynarr_free(dest->keys);
+	}
+
+	if(src->name) {
+		dest->name = malloc(strlen(src->name) + 1);
+		strcpy(dest->name, src->name);
+	}
+
+	dest->count = src->count;
+	dest->keys = dynarr_alloc(src->count, sizeof *dest->keys);
+	memcpy(dest->keys, src->keys, src->count * sizeof *dest->keys);
+
+	dest->def_val = src->def_val;
+	dest->interp = src->interp;
+	dest->extrap = src->extrap;
+}
+
 int anm_set_track_name(struct anm_track *track, const char *name)
 {
 	char *tmp;
