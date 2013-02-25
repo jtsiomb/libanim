@@ -55,6 +55,11 @@ void anm_destroy_track(struct anm_track *track);
 struct anm_track *anm_create_track(void);
 void anm_free_track(struct anm_track *track);
 
+/* copies track src to dest
+ * XXX: dest must have been initialized first
+ */
+void anm_copy_track(struct anm_track *dest, struct anm_track *src);
+
 int anm_set_track_name(struct anm_track *track, const char *name);
 const char *anm_get_track_name(struct anm_track *track);
 

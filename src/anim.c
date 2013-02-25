@@ -325,6 +325,7 @@ void anm_get_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm)
 		pthread_mutex_unlock(&node->cache_list_lock);
 
 		cache->time = ANM_TIME_INVAL;
+		cache->inv_time = ANM_TIME_INVAL;
 		pthread_setspecific(node->cache_key, cache);
 	}
 
@@ -348,7 +349,7 @@ void anm_get_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm)
 
 		m4_translate(tmat, pos.x, pos.y, pos.z);
 		quat_to_mat4(rmat, rot);
-		m4_translate(smat, scale.x, scale.y, scale.z);
+		m4_scale(smat, scale.x, scale.y, scale.z);
 
 		/* ok this would look nicer in C++ */
 		m4_mult(cache->matrix, pivmat, tmat);
@@ -379,6 +380,7 @@ void anm_get_inv_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm)
 		node->cache_list = cache;
 		pthread_mutex_unlock(&node->cache_list_lock);
 
+		cache->inv_time = ANM_TIME_INVAL;
 		cache->inv_time = ANM_TIME_INVAL;
 		pthread_setspecific(node->cache_key, cache);
 	}
