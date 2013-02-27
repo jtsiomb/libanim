@@ -312,6 +312,43 @@ vec3_t anm_get_pivot(struct anm_node *node)
 	return node->pivot;
 }
 
+void anm_get_node_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm)
+{
+	mat4_t tmat, rmat, smat, pivmat, neg_pivmat;
+	vec3_t pos, scale;
+	quat_t rot;
+
+	m4_identity(tmat);
+	/*no need to m4_identity(rmat); quat_to_mat4 sets this properly */
+	m4_identity(smat);
+	m4_identity(pivmat);
+	m4_identity(neg_pivmat);
+
+	pos = anm_get_node_position(node, tm);
+	rot = anm_get_node_rotation(node, tm);
+	scale = anm_get_node_scaling(node, tm);
+
+	m4_translate(pivmat, node->pivot.x, node->pivot.y, node->pivot.z);
+	m4_translate(neg_pivmat, -node->pivot.x, -node->pivot.y, -node->pivot.z);
+
+	m4_translate(tmat, pos.x, pos.y, pos.z);
+	quat_to_mat4(rmat, rot);
+	m4_scale(smat, scale.x, scale.y, scale.z);
+
+	/* ok this would look nicer in C++ */
+	m4_mult(mat, pivmat, tmat);
+	m4_mult(mat, mat, rmat);
+	m4_mult(mat, mat, smat);
+	m4_mult(mat, mat, neg_pivmat);
+}
+
+void anm_get_node_inv_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm)
+{
+	mat4_t tmp;
+	anm_get_node_matrix(node, tmp, tm);
+	m4_inverse(mat, tmp);
+}
+
 void anm_get_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm)
 {
 	struct mat_cache *cache = pthread_getspecific(node->cache_key);
@@ -330,32 +367,7 @@ void anm_get_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm)
 	}
 
 	if(cache->time != tm) {
-		mat4_t tmat, rmat, smat, pivmat, neg_pivmat;
-		vec3_t pos, scale;
-		quat_t rot;
-
-		m4_identity(tmat);
-		/*no need to m4_identity(rmat); quat_to_mat4 sets this properly */
-		m4_identity(smat);
-		m4_identity(pivmat);
-		m4_identity(neg_pivmat);
-
-		pos = anm_get_node_position(node, tm);
-		rot = anm_get_node_rotation(node, tm);
-		scale = anm_get_node_scaling(node, tm);
-
-		m4_translate(pivmat, node->pivot.x, node->pivot.y, node->pivot.z);
-		m4_translate(neg_pivmat, -node->pivot.x, -node->pivot.y, -node->pivot.z);
-
-		m4_translate(tmat, pos.x, pos.y, pos.z);
-		quat_to_mat4(rmat, rot);
-		m4_scale(smat, scale.x, scale.y, scale.z);
-
-		/* ok this would look nicer in C++ */
-		m4_mult(cache->matrix, pivmat, tmat);
-		m4_mult(cache->matrix, cache->matrix, rmat);
-		m4_mult(cache->matrix, cache->matrix, smat);
-		m4_mult(cache->matrix, cache->matrix, neg_pivmat);
+		anm_get_node_matrix(node, cache->matrix, tm);
 
 		if(node->parent) {
 			mat4_t parent_mat;

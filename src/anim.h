@@ -95,6 +95,14 @@ vec3_t anm_get_scaling(struct anm_node *node, anm_time_t tm);
 void anm_set_pivot(struct anm_node *node, vec3_t pivot);
 vec3_t anm_get_pivot(struct anm_node *node);
 
+/* these calculate the matrix and inverse matrix of this node alone */
+void anm_get_node_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm);
+void anm_get_node_inv_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm);
+
+/* These calculate the matrix and inverse matrix of this node taking hierarchy
+ * into account. The results are cached in thread-specific storage and returned
+ * if there's no change in time or tracks from the last query...
+ */
 void anm_get_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm);
 void anm_get_inv_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm);
 
