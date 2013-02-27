@@ -360,7 +360,7 @@ void anm_get_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm)
 		if(node->parent) {
 			mat4_t parent_mat;
 
-			anm_get_matrix(node->parent, mat, tm);
+			anm_get_matrix(node->parent, parent_mat, tm);
 			m4_mult(cache->matrix, parent_mat, cache->matrix);
 		}
 		cache->time = tm;
