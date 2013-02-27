@@ -276,18 +276,27 @@ static anm_time_t remap_extend(anm_time_t tm, anm_time_t start, anm_time_t end)
 
 static anm_time_t remap_clamp(anm_time_t tm, anm_time_t start, anm_time_t end)
 {
+	if(start == end) {
+		return start;
+	}
 	return tm < start ? start : (tm >= end ? end - 1 : tm);
 }
 
 static anm_time_t remap_repeat(anm_time_t tm, anm_time_t start, anm_time_t end)
 {
 	anm_time_t interv = end - start;
+	anm_time_t x = (tm - start) % interv;
 
-	if(tm < start) {
+	if(x < 0) {
+		x += interv;
+	}
+	return x + start;
+
+	/*if(tm < start) {
 		while(tm < start) {
 			tm += interv;
 		}
 		return tm;
 	}
-	return (tm - start) % interv + start;
+	return (tm - start) % interv + start;*/
 }
