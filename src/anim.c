@@ -4,6 +4,8 @@
 #include "anim.h"
 #include "dynarr.h"
 
+#define ROT_USE_SLERP
+
 static void invalidate_cache(struct anm_node *node);
 
 int anm_init_node(struct anm_node *node)
@@ -200,13 +202,14 @@ void anm_set_rotation(struct anm_node *node, quat_t rot, anm_time_t tm)
 
 quat_t anm_get_node_rotation(struct anm_node *node, anm_time_t tm)
 {
-	/*quat_t q;
+#ifndef ROT_USE_SLERP
+	quat_t q;
 	q.x = anm_get_value(node->tracks + ANM_TRACK_ROT_X, tm);
 	q.y = anm_get_value(node->tracks + ANM_TRACK_ROT_Y, tm);
 	q.z = anm_get_value(node->tracks + ANM_TRACK_ROT_Z, tm);
 	q.w = anm_get_value(node->tracks + ANM_TRACK_ROT_W, tm);
-	return q;*/
-
+	return q;
+#else
 	int idx0, idx1, last_idx;
 	anm_time_t tstart, tend;
 	float t, dt;
@@ -267,6 +270,7 @@ quat_t anm_get_node_rotation(struct anm_node *node, anm_time_t tm)
 	q2.w = track_w->keys[idx1].val;
 
 	return quat_slerp(q1, q2, t);
+#endif
 }
 
 void anm_set_scaling(struct anm_node *node, vec3_t scl, anm_time_t tm)
