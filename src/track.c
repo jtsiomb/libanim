@@ -284,9 +284,13 @@ static anm_time_t remap_clamp(anm_time_t tm, anm_time_t start, anm_time_t end)
 
 static anm_time_t remap_repeat(anm_time_t tm, anm_time_t start, anm_time_t end)
 {
-	anm_time_t interv = end - start;
-	anm_time_t x = (tm - start) % interv;
+	anm_time_t x, interv = end - start;
 
+	if(interv == 0) {
+		return start;
+	}
+
+	x = (tm - start) % interv;
 	if(x < 0) {
 		x += interv;
 	}

@@ -200,6 +200,13 @@ void anm_set_rotation(struct anm_node *node, quat_t rot, anm_time_t tm)
 
 quat_t anm_get_node_rotation(struct anm_node *node, anm_time_t tm)
 {
+	/*quat_t q;
+	q.x = anm_get_value(node->tracks + ANM_TRACK_ROT_X, tm);
+	q.y = anm_get_value(node->tracks + ANM_TRACK_ROT_Y, tm);
+	q.z = anm_get_value(node->tracks + ANM_TRACK_ROT_Z, tm);
+	q.w = anm_get_value(node->tracks + ANM_TRACK_ROT_W, tm);
+	return q;*/
+
 	int idx0, idx1, last_idx;
 	anm_time_t tstart, tend;
 	float t, dt;
@@ -223,11 +230,28 @@ quat_t anm_get_node_rotation(struct anm_node *node, anm_time_t tm)
 
 	tstart = track_x->keys[0].time;
 	tend = track_x->keys[last_idx].time;
+
+	if(tstart == tend) {
+		q.x = track_x->keys[0].val;
+		q.y = track_y->keys[0].val;
+		q.z = track_z->keys[0].val;
+		q.w = track_w->keys[0].val;
+		return q;
+	}
+
 	tm = anm_remap_time(track_x, tm, tstart, tend);
 
 	idx0 = anm_get_key_interval(track_x, tm);
 	assert(idx0 >= 0 && idx0 < track_x->count);
 	idx1 = idx0 + 1;
+
+	if(idx0 == last_idx) {
+		q.x = track_x->keys[idx0].val;
+		q.y = track_y->keys[idx0].val;
+		q.z = track_z->keys[idx0].val;
+		q.w = track_w->keys[idx0].val;
+		return q;
+	}
 
 	dt = (float)(track_x->keys[idx1].time - track_x->keys[idx0].time);
 	t = (float)(tm - track_x->keys[idx0].time) / dt;
