@@ -269,6 +269,9 @@ quat_t anm_get_node_rotation(struct anm_node *node, anm_time_t tm)
 	q2.z = track_z->keys[idx1].val;
 	q2.w = track_w->keys[idx1].val;
 
+	/*q1 = quat_normalize(q1);
+	q2 = quat_normalize(q2);*/
+
 	return quat_slerp(q1, q2, t);
 #endif
 }
@@ -342,32 +345,32 @@ vec3_t anm_get_pivot(struct anm_node *node)
 
 void anm_get_node_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm)
 {
-	mat4_t tmat, rmat, smat, pivmat, neg_pivmat;
+	int i;
+	mat4_t rmat;
 	vec3_t pos, scale;
 	quat_t rot;
-
-	m4_identity(tmat);
-	/*no need to m4_identity(rmat); quat_to_mat4 sets this properly */
-	m4_identity(smat);
-	m4_identity(pivmat);
-	m4_identity(neg_pivmat);
 
 	pos = anm_get_node_position(node, tm);
 	rot = anm_get_node_rotation(node, tm);
 	scale = anm_get_node_scaling(node, tm);
 
-	m4_translate(pivmat, node->pivot.x, node->pivot.y, node->pivot.z);
-	m4_translate(neg_pivmat, -node->pivot.x, -node->pivot.y, -node->pivot.z);
+	m4_set_translation(mat, node->pivot.x, node->pivot.y, node->pivot.z);
 
-	m4_translate(tmat, pos.x, pos.y, pos.z);
 	quat_to_mat4(rmat, rot);
-	m4_scale(smat, scale.x, scale.y, scale.z);
+	for(i=0; i<3; i++) {
+		mat[i][0] = rmat[i][0];
+		mat[i][1] = rmat[i][1];
+		mat[i][2] = rmat[i][2];
+	}
+	/* this loop is equivalent to: m4_mult(mat, mat, rmat); */
 
-	/* ok this would look nicer in C++ */
-	m4_mult(mat, pivmat, tmat);
-	m4_mult(mat, mat, rmat);
-	m4_mult(mat, mat, smat);
-	m4_mult(mat, mat, neg_pivmat);
+	mat[0][0] *= scale.x; mat[0][1] *= scale.y; mat[0][2] *= scale.z; mat[0][3] += pos.x;
+	mat[1][0] *= scale.x; mat[1][1] *= scale.y; mat[1][2] *= scale.z; mat[1][3] += pos.y;
+	mat[2][0] *= scale.x; mat[2][1] *= scale.y; mat[2][2] *= scale.z; mat[2][3] += pos.z;
+
+	m4_translate(mat, -node->pivot.x, -node->pivot.y, -node->pivot.z);
+
+	/* that's basically: pivot * rotation * translation * scaling * -pivot */
 }
 
 void anm_get_node_inv_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm)
