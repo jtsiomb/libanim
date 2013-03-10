@@ -21,6 +21,7 @@ int anm_init_node(struct anm_node *node)
 
 	/* initialize thread-local matrix cache */
 	pthread_key_create(&node->cache_key, 0);
+	pthread_mutex_init(&node->cache_list_lock, 0);
 
 	for(i=0; i<ANM_NUM_TRACKS; i++) {
 		if(anm_init_track(node->tracks + i) == -1) {

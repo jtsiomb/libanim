@@ -55,7 +55,7 @@ void keyb(unsigned char key, int x, int y);
 void mouse(int bn, int state, int x, int y);
 void motion(int x, int y);
 
-float cam_theta = 20, cam_phi = 20, cam_dist = 15;
+float cam_theta = 200, cam_phi = 20, cam_dist = 15;
 struct anm_node *root;
 
 struct anm_node *nodes[NUM_NODES];
@@ -186,7 +186,7 @@ void disp(void)
 
 	for(i=0; i<NUM_NODES; i++) {
 		float color[4] = {0, 0, 0, 1};
-		mat4_t xform;
+		mat4_t xform, xform_transp;
 
 		color[0] = parts[i].color.x;
 		color[1] = parts[i].color.y;
@@ -196,9 +196,10 @@ void disp(void)
 		glColor4fv(color);
 
 		anm_get_matrix(nodes[i], xform, msec);
+		m4_transpose(xform_transp, xform);
 
 		glPushMatrix();
-		glMultTransposeMatrixf((float*)xform);
+		glMultMatrixf((float*)xform_transp);
 
 		glScalef(parts[i].sz.x, parts[i].sz.y, parts[i].sz.z);
 		glutSolidCube(1.0);
