@@ -14,6 +14,7 @@ static float interp_cubic(float v0, float v1, float v2, float v3, float t);
 static anm_time_t remap_extend(anm_time_t tm, anm_time_t start, anm_time_t end);
 static anm_time_t remap_clamp(anm_time_t tm, anm_time_t start, anm_time_t end);
 static anm_time_t remap_repeat(anm_time_t tm, anm_time_t start, anm_time_t end);
+static anm_time_t remap_pingpong(anm_time_t tm, anm_time_t start, anm_time_t end);
 
 /* XXX keep this in sync with enum anm_interpolator at track.h */
 static float (*interp[])(float, float, float, float, float) = {
@@ -28,6 +29,7 @@ static anm_time_t (*remap_time[])(anm_time_t, anm_time_t, anm_time_t) = {
 	remap_extend,
 	remap_clamp,
 	remap_repeat,
+	remap_pingpong,
 	0
 };
 
@@ -303,4 +305,12 @@ static anm_time_t remap_repeat(anm_time_t tm, anm_time_t start, anm_time_t end)
 		return tm;
 	}
 	return (tm - start) % interv + start;*/
+}
+
+static anm_time_t remap_pingpong(anm_time_t tm, anm_time_t start, anm_time_t end)
+{
+	anm_time_t interv = end - start;
+	anm_time_t x = remap_repeat(tm, start, end + interv);
+
+	return x > end ? end + interv - x : x;
 }

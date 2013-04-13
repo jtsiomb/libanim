@@ -16,7 +16,8 @@ enum anm_interpolator {
 enum anm_extrapolator {
 	ANM_EXTRAP_EXTEND,	/* extend to infinity */
 	ANM_EXTRAP_CLAMP,	/* clamp to last value */
-	ANM_EXTRAP_REPEAT	/* repeat motion */
+	ANM_EXTRAP_REPEAT,	/* repeat motion */
+	ANM_EXTRAP_PINGPONG	/* repeat with mirroring */
 };
 
 typedef long anm_time_t;
