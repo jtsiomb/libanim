@@ -493,6 +493,6 @@ static void invalidate_cache(struct anm_node *node)
 {
 	struct mat_cache *cache = pthread_getspecific(node->cache_key);
 	if(cache) {
-	   cache->time = ANM_TIME_INVAL;
+	   cache->time = cache->inv_time = ANM_TIME_INVAL;
 	}
 }
