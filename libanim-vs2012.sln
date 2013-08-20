@@ -1,0 +1,37 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libanim", "libanim-vs2012.vcxproj", "{D8F5A227-C3D7-45EC-9F2F-720B97D21C4B}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example", "example\example-vs2012.vcxproj", "{0121AD8F-6279-4AC6-9CD4-EDBC798BC498}"
+	ProjectSection(ProjectDependencies) = postProject
+		{D8F5A227-C3D7-45EC-9F2F-720B97D21C4B} = {D8F5A227-C3D7-45EC-9F2F-720B97D21C4B}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Debug|x64 = Debug|x64
+		Release|Win32 = Release|Win32
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D8F5A227-C3D7-45EC-9F2F-720B97D21C4B}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D8F5A227-C3D7-45EC-9F2F-720B97D21C4B}.Debug|Win32.Build.0 = Debug|Win32
+		{D8F5A227-C3D7-45EC-9F2F-720B97D21C4B}.Debug|x64.ActiveCfg = Debug|x64
+		{D8F5A227-C3D7-45EC-9F2F-720B97D21C4B}.Debug|x64.Build.0 = Debug|x64
+		{D8F5A227-C3D7-45EC-9F2F-720B97D21C4B}.Release|Win32.ActiveCfg = Release|Win32
+		{D8F5A227-C3D7-45EC-9F2F-720B97D21C4B}.Release|Win32.Build.0 = Release|Win32
+		{D8F5A227-C3D7-45EC-9F2F-720B97D21C4B}.Release|x64.ActiveCfg = Release|x64
+		{D8F5A227-C3D7-45EC-9F2F-720B97D21C4B}.Release|x64.Build.0 = Release|x64
+		{0121AD8F-6279-4AC6-9CD4-EDBC798BC498}.Debug|Win32.ActiveCfg = Debug|Win32
+		{0121AD8F-6279-4AC6-9CD4-EDBC798BC498}.Debug|Win32.Build.0 = Debug|Win32
+		{0121AD8F-6279-4AC6-9CD4-EDBC798BC498}.Debug|x64.ActiveCfg = Debug|x64
+		{0121AD8F-6279-4AC6-9CD4-EDBC798BC498}.Release|Win32.ActiveCfg = Release|Win32
+		{0121AD8F-6279-4AC6-9CD4-EDBC798BC498}.Release|Win32.Build.0 = Release|Win32
+		{0121AD8F-6279-4AC6-9CD4-EDBC798BC498}.Release|x64.ActiveCfg = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
