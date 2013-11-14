@@ -69,7 +69,7 @@ void anm_free_track(struct anm_track *track)
 	free(track);
 }
 
-void anm_copy_track(struct anm_track *dest, struct anm_track *src)
+void anm_copy_track(struct anm_track *dest, const struct anm_track *src)
 {
 	free(dest->name);
 	if(dest->keys) {
