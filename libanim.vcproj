@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioProject
 	ProjectType="Visual C++"
-	Version="9,00"
+	Version="9.00"
 	Name="libanim"
 	ProjectGUID="{D8F5A227-C3D7-45EC-9F2F-720B97D21C4B}"
 	RootNamespace="libanim"
@@ -142,6 +142,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
+				CommandLine="mkdir usr\include\anim&#x0D;&#x0A;mkdir usr\lib&#x0D;&#x0A;copy /Y src\*.h usr\include\anim\&#x0D;&#x0A;copy /Y src\*.inl usr\include\anim\&#x0D;&#x0A;copy /Y $(TargetPath) usr\lib\&#x0D;&#x0A;"
 			/>
 		</Configuration>
 	</Configurations>
