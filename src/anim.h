@@ -42,6 +42,9 @@ struct anm_node {
 	pthread_key_t cache_key;
 	pthread_mutex_t cache_list_lock;
 
+	/* matrix calculated by anm_eval functions (no locking, meant as a pre-pass) */
+	mat4_t matrix;
+
 	struct anm_node *parent;
 	struct anm_node *child;
 	struct anm_node *next;
@@ -95,9 +98,23 @@ vec3_t anm_get_scaling(struct anm_node *node, anm_time_t tm);
 void anm_set_pivot(struct anm_node *node, vec3_t pivot);
 vec3_t anm_get_pivot(struct anm_node *node);
 
+/* those return the start and end times of the whole tree */
+anm_time_t anm_get_start_time(struct anm_node *node);
+anm_time_t anm_get_end_time(struct anm_node *node);
+
 /* these calculate the matrix and inverse matrix of this node alone */
 void anm_get_node_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm);
 void anm_get_node_inv_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm);
+
+/* ---- top-down matrix calculation interface ---- */
+
+/* calculate and set the matrix of this node */
+void anm_eval_node(struct anm_node *node, anm_time_t tm);
+/* calculate and set the matrix of this node and all its children recursively */
+void anm_eval(struct anm_node *node, anm_time_t tm);
+
+
+/* ---- bottom-up lazy matrix calculation interface ---- */
 
 /* These calculate the matrix and inverse matrix of this node taking hierarchy
  * into account. The results are cached in thread-specific storage and returned
@@ -105,10 +122,6 @@ void anm_get_node_inv_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm);
  */
 void anm_get_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm);
 void anm_get_inv_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm);
-
-/* those return the start and end times of the whole tree */
-anm_time_t anm_get_start_time(struct anm_node *node);
-anm_time_t anm_get_end_time(struct anm_node *node);
 
 #ifdef __cplusplus
 }
