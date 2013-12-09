@@ -381,6 +381,30 @@ void anm_get_node_inv_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm)
 	m4_inverse(mat, tmp);
 }
 
+void anm_eval_node(struct anm_node *node, anm_time_t tm)
+{
+	anm_get_node_matrix(node, node->matrix, tm);
+}
+
+void anm_eval(struct anm_node *node, anm_time_t tm)
+{
+	struct anm_node *c;
+
+	anm_eval_node(node, tm);
+
+	if(node->parent) {
+		/* due to post-order traversal, the parent matrix is already evaluated */
+		m4_mult(node->matrix, node->parent->matrix, node->matrix);
+	}
+
+	/* recersively evaluate all children */
+	c = node->child;
+	while(c) {
+		anm_eval(c, tm);
+		c = c->next;
+	}
+}
+
 void anm_get_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm)
 {
 	struct mat_cache *cache = pthread_getspecific(node->cache_key);

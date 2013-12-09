@@ -184,6 +184,10 @@ void disp(void)
 	glRotatef(cam_phi, 1, 0, 0);
 	glRotatef(cam_theta, 0, 1, 0);
 
+	/* first render a character with bottom-up lazy matrix calculation */
+	glPushMatrix();
+	glTranslatef(-2.5, 0, 0);
+
 	for(i=0; i<NUM_NODES; i++) {
 		float color[4] = {0, 0, 0, 1};
 		mat4_t xform, xform_transp;
@@ -203,10 +207,39 @@ void disp(void)
 
 		glScalef(parts[i].sz.x, parts[i].sz.y, parts[i].sz.z);
 		glutSolidCube(1.0);
-		/*glutWireSphere(0.6, 16, 8);*/
 
 		glPopMatrix();
 	}
+	glPopMatrix();
+
+	/* then render another one using simple top-down recursive evaluation */
+	glPushMatrix();
+	glTranslatef(2.5, 0, 0);
+
+	anm_eval(nodes[NODE_TORSO], msec);	/* calculate all matrices recursively */
+
+	for(i=0; i<NUM_NODES; i++) {
+		float color[4] = {0, 0, 0, 1};
+		mat4_t xform_transp;
+
+		color[0] = parts[i].color.x;
+		color[1] = parts[i].color.y;
+		color[2] = parts[i].color.z;
+
+		glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, color);
+		glColor4fv(color);
+
+		m4_transpose(xform_transp, nodes[i]->matrix);
+
+		glPushMatrix();
+		glMultMatrixf((float*)xform_transp);
+
+		glScalef(parts[i].sz.x, parts[i].sz.y, parts[i].sz.z);
+		glutSolidCube(1.0);
+
+		glPopMatrix();
+	}
+	glPopMatrix();
 
 	glutSwapBuffers();
 	assert(glGetError() == GL_NO_ERROR);
