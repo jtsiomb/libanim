@@ -48,6 +48,8 @@ enum {
 };
 
 int init(void);
+static void set_walk_animation(int idx);
+static void set_jump_animation(int idx);
 void disp(void);
 void idle(void);
 void reshape(int x, int y);
@@ -59,6 +61,9 @@ float cam_theta = 200, cam_phi = 20, cam_dist = 15;
 struct anm_node *root;
 
 struct anm_node *nodes[NUM_NODES];
+
+int cur_anim = 0, next_anim = 0;
+unsigned int trans_start_tm;
 
 int main(int argc, char **argv)
 {
@@ -92,15 +97,11 @@ int init(void)
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
 
-	root = nodes[0];
-
 	for(i=0; i<NUM_NODES; i++) {
 		nodes[i] = anm_create_node();
-
 		anm_set_pivot(nodes[i], parts[i].pivot);
-		anm_set_position(nodes[i], parts[i].pos, 0);
-		anm_set_extrapolator(nodes[i], ANM_EXTRAP_REPEAT);
 	}
+	root = nodes[0];
 
 	anm_link_node(nodes[NODE_TORSO], nodes[NODE_HEAD]);
 	anm_link_node(nodes[NODE_TORSO], nodes[NODE_LEFT_UPPER_LEG]);
@@ -111,6 +112,27 @@ int init(void)
 	anm_link_node(nodes[NODE_RIGHT_UPPER_LEG], nodes[NODE_RIGHT_LOWER_LEG]);
 	anm_link_node(nodes[NODE_LEFT_UPPER_ARM], nodes[NODE_LEFT_LOWER_ARM]);
 	anm_link_node(nodes[NODE_RIGHT_UPPER_ARM], nodes[NODE_RIGHT_LOWER_ARM]);
+
+	set_walk_animation(0);
+
+	anm_add_animation(root);	/* recursively add another animation slot to all nodes */
+	set_jump_animation(1);
+
+	anm_use_animation(root, cur_anim);
+
+	return 0;
+}
+
+static void set_walk_animation(int idx)
+{
+	int i;
+
+	anm_use_animation(root, idx);
+
+	for(i=0; i<NUM_NODES; i++) {
+		anm_set_position(nodes[i], parts[i].pos, 0);
+		anm_set_extrapolator(nodes[i], ANM_EXTRAP_REPEAT);
+	}
 
 	/* upper leg animation */
 	anm_set_rotation(nodes[NODE_LEFT_UPPER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(-15), 1, 0, 0), 0);
@@ -163,8 +185,53 @@ int init(void)
 	anm_set_rotation(nodes[NODE_RIGHT_LOWER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 500);
 	anm_set_rotation(nodes[NODE_RIGHT_LOWER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(40), 1, 0, 0), 1000);
 	anm_set_rotation(nodes[NODE_RIGHT_LOWER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 2000);
+}
 
-	return 0;
+static void set_jump_animation(int idx)
+{
+	int i;
+
+	anm_use_animation(root, idx);
+
+	for(i=0; i<NUM_NODES; i++) {
+		anm_set_position(nodes[i], parts[i].pos, 0);
+		anm_set_extrapolator(nodes[i], ANM_EXTRAP_REPEAT);
+	}
+
+	anm_set_rotation(nodes[NODE_LEFT_UPPER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 0);
+	anm_set_rotation(nodes[NODE_LEFT_UPPER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(40), 1, 0, 0), 1000);
+	anm_set_rotation(nodes[NODE_LEFT_UPPER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 1500);
+	anm_set_rotation(nodes[NODE_LEFT_UPPER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 2000);
+	anm_set_rotation(nodes[NODE_RIGHT_UPPER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 0);
+	anm_set_rotation(nodes[NODE_RIGHT_UPPER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(40), 1, 0, 0), 1000);
+	anm_set_rotation(nodes[NODE_RIGHT_UPPER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 1500);
+	anm_set_rotation(nodes[NODE_RIGHT_UPPER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 2000);
+
+	anm_set_rotation(nodes[NODE_LEFT_LOWER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 0);
+	anm_set_rotation(nodes[NODE_LEFT_LOWER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(-80), 1, 0, 0), 1000);
+	anm_set_rotation(nodes[NODE_LEFT_LOWER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 1500);
+	anm_set_rotation(nodes[NODE_LEFT_LOWER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 2000);
+	anm_set_rotation(nodes[NODE_RIGHT_LOWER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 0);
+	anm_set_rotation(nodes[NODE_RIGHT_LOWER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(-80), 1, 0, 0), 1000);
+	anm_set_rotation(nodes[NODE_RIGHT_LOWER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 1500);
+	anm_set_rotation(nodes[NODE_RIGHT_LOWER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 2000);
+
+	anm_set_position(nodes[NODE_TORSO], parts[NODE_TORSO].pos, 0);
+	anm_set_position(nodes[NODE_TORSO], v3_add(parts[NODE_TORSO].pos, v3_cons(0, -1, 0)), 1000);
+	anm_set_position(nodes[NODE_TORSO], v3_add(parts[NODE_TORSO].pos, v3_cons(0, 2, 0)), 1500);
+	anm_set_position(nodes[NODE_TORSO], parts[NODE_TORSO].pos, 2000);
+
+	anm_set_rotation(nodes[NODE_LEFT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 0);
+	anm_set_rotation(nodes[NODE_LEFT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(-20), 1, 0, 0), 1000);
+	anm_set_rotation(nodes[NODE_LEFT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(20), 1, 0, 0), 1200);
+	anm_set_rotation(nodes[NODE_LEFT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(170), 1, 0, 0), 1500);
+	anm_set_rotation(nodes[NODE_LEFT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 2000);
+
+	anm_set_rotation(nodes[NODE_RIGHT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 0);
+	anm_set_rotation(nodes[NODE_RIGHT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(-20), 1, 0, 0), 1000);
+	anm_set_rotation(nodes[NODE_RIGHT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(20), 1, 0, 0), 1200);
+	anm_set_rotation(nodes[NODE_RIGHT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(170), 1, 0, 0), 1500);
+	anm_set_rotation(nodes[NODE_RIGHT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 2000);
 }
 
 void disp(void)
@@ -183,6 +250,18 @@ void disp(void)
 	glTranslatef(0, 0, -cam_dist);
 	glRotatef(cam_phi, 1, 0, 0);
 	glRotatef(cam_theta, 0, 1, 0);
+
+	if(cur_anim != next_anim) {
+		float t = (msec - trans_start_tm) / 1000.0;
+
+		if(t >= 1.0) {
+			t = 1.0;
+			cur_anim = next_anim;
+			anm_use_animation(root, cur_anim);
+		} else {
+			anm_use_animations(root, cur_anim, next_anim, t);
+		}
+	}
 
 	/* first render a character with bottom-up lazy matrix calculation */
 	glPushMatrix();
@@ -264,6 +343,11 @@ void keyb(unsigned char key, int x, int y)
 	switch(key) {
 	case 27:
 		exit(0);
+
+	case ' ':
+		next_anim = (cur_anim + 1) % 2;
+		trans_start_tm = glutGet(GLUT_ELAPSED_TIME);
+		break;
 	}
 }
 

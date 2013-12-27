@@ -27,10 +27,18 @@ enum {
 	ANM_NUM_TRACKS
 };
 
+struct anm_animation {
+	char *name;
+	struct anm_track tracks[ANM_NUM_TRACKS];
+};
+
 struct anm_node {
 	char *name;
 
-	struct anm_track tracks[ANM_NUM_TRACKS];
+	int cur_anim[2];
+	float cur_mix;
+
+	struct anm_animation *animations;
 	vec3_t pivot;
 
 	/* matrix cache */
@@ -54,6 +62,9 @@ struct anm_node {
 extern "C" {
 #endif
 
+int anm_init_animation(struct anm_animation *anim);
+void anm_destroy_animation(struct anm_animation *anim);
+
 /* node constructor and destructor */
 int anm_init_node(struct anm_node *node);
 void anm_destroy_node(struct anm_node *node);
@@ -74,12 +85,45 @@ void anm_free_node_tree(struct anm_node *tree);
 int anm_set_node_name(struct anm_node *node, const char *name);
 const char *anm_get_node_name(struct anm_node *node);
 
-void anm_set_interpolator(struct anm_node *node, enum anm_interpolator in);
-void anm_set_extrapolator(struct anm_node *node, enum anm_extrapolator ex);
-
 /* link and unlink nodes with parent/child relations */
 void anm_link_node(struct anm_node *parent, struct anm_node *child);
 int anm_unlink_node(struct anm_node *parent, struct anm_node *child);
+
+void anm_set_pivot(struct anm_node *node, vec3_t pivot);
+vec3_t anm_get_pivot(struct anm_node *node);
+
+/* set active animation(s) */
+int anm_use_node_animation(struct anm_node *node, int aidx);
+int anm_use_node_animations(struct anm_node *node, int aidx, int bidx, float t);
+/* recursive variants */
+int anm_use_animation(struct anm_node *node, int aidx);
+int anm_use_animations(struct anm_node *node, int aidx, int bidx, float t);
+
+/* returns the requested current animation index, which can be 0 or 1 */
+int anm_get_active_animation_index(struct anm_node *node, int which);
+/* returns the requested current animation, which can be 0 or 1 */
+struct anm_animation *anm_get_active_animation(struct anm_node *node, int which);
+float anm_get_active_animation_mix(struct anm_node *node);
+
+int anm_get_animation_count(struct anm_node *node);
+
+/* add/remove an animation to the specified node */
+int anm_add_node_animation(struct anm_node *node);
+int anm_remove_node_animation(struct anm_node *node, int idx);
+
+/* add/remove an animation to the specified node and all it's descendants */
+int anm_add_animation(struct anm_node *node);
+int anm_remove_animation(struct anm_node *node, int idx);
+
+struct anm_animation *anm_get_animation(struct anm_node *node, int idx);
+struct anm_animation *anm_get_animation_by_name(struct anm_node *node, const char *name);
+
+int anm_find_animation(struct anm_node *node, const char *name);
+
+/* set the interpolator for the (first) currently active animation */
+void anm_set_interpolator(struct anm_node *node, enum anm_interpolator in);
+/* set the extrapolator for the (first) currently active animation */
+void anm_set_extrapolator(struct anm_node *node, enum anm_extrapolator ex);
 
 void anm_set_position(struct anm_node *node, vec3_t pos, anm_time_t tm);
 vec3_t anm_get_node_position(struct anm_node *node, anm_time_t tm);
@@ -94,9 +138,6 @@ vec3_t anm_get_node_scaling(struct anm_node *node, anm_time_t tm);
 vec3_t anm_get_position(struct anm_node *node, anm_time_t tm);
 quat_t anm_get_rotation(struct anm_node *node, anm_time_t tm);
 vec3_t anm_get_scaling(struct anm_node *node, anm_time_t tm);
-
-void anm_set_pivot(struct anm_node *node, vec3_t pivot);
-vec3_t anm_get_pivot(struct anm_node *node);
 
 /* those return the start and end times of the whole tree */
 anm_time_t anm_get_start_time(struct anm_node *node);
