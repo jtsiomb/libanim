@@ -252,7 +252,7 @@ void disp(void)
 	glRotatef(cam_theta, 0, 1, 0);
 
 	if(cur_anim != next_anim) {
-		float t = (msec - trans_start_tm) / 1000.0;
+		float t = (msec - trans_start_tm) / 1500.0;
 
 		if(t >= 1.0) {
 			t = 1.0;

@@ -39,6 +39,15 @@ void anm_destroy_animation(struct anm_animation *anim)
 	free(anim->name);
 }
 
+void anm_set_animation_name(struct anm_animation *anim, const char *name)
+{
+	char *newname = malloc(strlen(name) + 1);
+	if(!newname) return;
+
+	free(anim->name);
+	anim->name = newname;
+}
+
 /* ---- node implementation ----- */
 
 int anm_init_node(struct anm_node *node)

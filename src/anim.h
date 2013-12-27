@@ -65,6 +65,9 @@ extern "C" {
 int anm_init_animation(struct anm_animation *anim);
 void anm_destroy_animation(struct anm_animation *anim);
 
+void anm_set_animation_name(struct anm_animation *anim, const char *name);
+
+
 /* node constructor and destructor */
 int anm_init_node(struct anm_node *node);
 void anm_destroy_node(struct anm_node *node);
