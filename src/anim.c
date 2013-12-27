@@ -8,7 +8,7 @@
 
 static void invalidate_cache(struct anm_node *node);
 
-int anm_init_node(struct anm_node *node)
+int anm_init_animation(struct anm_animation *anim)
 {
 	int i, j;
 	static const float defaults[] = {
@@ -17,20 +17,49 @@ int anm_init_node(struct anm_node *node)
 		1.0f, 1.0f, 1.0f		/* default scale factor */
 	};
 
+	anim->name = 0;
+
+	for(i=0; i<ANM_NUM_TRACKS; i++) {
+		if(anm_init_track(anim->tracks + i) == -1) {
+			for(j=0; j<i; j++) {
+				anm_destroy_track(anim->tracks + i);
+			}
+		}
+		anm_set_track_default(anim->tracks + i, defaults[i]);
+	}
+	return 0;
+}
+
+void anm_destroy_animation(struct anm_animation *anim)
+{
+	int i;
+	for(i=0; i<ANM_NUM_TRACKS; i++) {
+		anm_destroy_track(anim->tracks + i);
+	}
+	free(anim->name);
+}
+
+/* ---- node implementation ----- */
+
+int anm_init_node(struct anm_node *node)
+{
 	memset(node, 0, sizeof *node);
+
+	node->cur_anim[1] = -1;
+	node->cur_mix = 0;
+
+	if(!(node->animations = dynarr_alloc(1, sizeof *node->animations))) {
+		return -1;
+	}
+	if(anm_init_animation(node->animations) == -1) {
+		dynarr_free(node->animations);
+		return -1;
+	}
 
 	/* initialize thread-local matrix cache */
 	pthread_key_create(&node->cache_key, 0);
 	pthread_mutex_init(&node->cache_list_lock, 0);
 
-	for(i=0; i<ANM_NUM_TRACKS; i++) {
-		if(anm_init_track(node->tracks + i) == -1) {
-			for(j=0; j<i; j++) {
-				anm_destroy_track(node->tracks + i);
-			}
-		}
-		anm_set_track_default(node->tracks + i, defaults[i]);
-	}
 	return 0;
 }
 
@@ -40,8 +69,9 @@ void anm_destroy_node(struct anm_node *node)
 	free(node->name);
 
 	for(i=0; i<ANM_NUM_TRACKS; i++) {
-		anm_destroy_track(node->tracks + i);
+		anm_destroy_animation(node->animations + i);
 	}
+	dynarr_free(node->animations);
 
 	/* destroy thread-specific cache */
 	pthread_key_delete(node->cache_key);
@@ -123,26 +153,6 @@ const char *anm_get_node_name(struct anm_node *node)
 	return node->name ? node->name : "";
 }
 
-void anm_set_interpolator(struct anm_node *node, enum anm_interpolator in)
-{
-	int i;
-
-	for(i=0; i<ANM_NUM_TRACKS; i++) {
-		anm_set_track_interpolator(node->tracks + i, in);
-	}
-	invalidate_cache(node);
-}
-
-void anm_set_extrapolator(struct anm_node *node, enum anm_extrapolator ex)
-{
-	int i;
-
-	for(i=0; i<ANM_NUM_TRACKS; i++) {
-		anm_set_track_extrapolator(node->tracks + i, ex);
-	}
-	invalidate_cache(node);
-}
-
 void anm_link_node(struct anm_node *p, struct anm_node *c)
 {
 	c->next = p->child;
@@ -175,40 +185,284 @@ int anm_unlink_node(struct anm_node *p, struct anm_node *c)
 	return -1;
 }
 
+void anm_set_pivot(struct anm_node *node, vec3_t piv)
+{
+	node->pivot = piv;
+}
+
+vec3_t anm_get_pivot(struct anm_node *node)
+{
+	return node->pivot;
+}
+
+
+/* animation management */
+
+int anm_use_node_animation(struct anm_node *node, int aidx)
+{
+	if(aidx == node->cur_anim[0] && node->cur_anim[1] == -1) {
+		return 0;	/* no change, no invalidation */
+	}
+
+	if(aidx < 0 || aidx >= anm_get_animation_count(node)) {
+		return -1;
+	}
+
+	node->cur_anim[0] = aidx;
+	node->cur_anim[1] = -1;
+	node->cur_mix = 0;
+
+	invalidate_cache(node);
+	return 0;
+}
+
+int anm_use_node_animations(struct anm_node *node, int aidx, int bidx, float t)
+{
+	int num_anim;
+
+	if(node->cur_anim[0] == aidx && node->cur_anim[1] == bidx &&
+			fabs(t - node->cur_mix) < 1e-6) {
+		return 0;	/* no change, no invalidation */
+	}
+
+	num_anim = anm_get_animation_count(node);
+	if(aidx < 0 || aidx >= num_anim) {
+		return anm_use_animation(node, bidx);
+	}
+	if(bidx < 0 || bidx >= num_anim) {
+		return anm_use_animation(node, aidx);
+	}
+	node->cur_anim[0] = aidx;
+	node->cur_anim[1] = bidx;
+	node->cur_mix = t;
+
+	invalidate_cache(node);
+	return 0;
+}
+
+int anm_use_animation(struct anm_node *node, int aidx)
+{
+	struct anm_node *child;
+
+	if(anm_use_node_animation(node, aidx) == -1) {
+		return -1;
+	}
+
+	child = node->child;
+	while(child) {
+		if(anm_use_animation(child, aidx) == -1) {
+			return -1;
+		}
+		child = child->next;
+	}
+	return 0;
+}
+
+int anm_use_animations(struct anm_node *node, int aidx, int bidx, float t)
+{
+	struct anm_node *child;
+
+	if(anm_use_node_animations(node, aidx, bidx, t) == -1) {
+		return -1;
+	}
+
+	child = node->child;
+	while(child) {
+		if(anm_use_animations(child, aidx, bidx, t) == -1) {
+			return -1;
+		}
+		child = child->next;
+	}
+	return 0;
+
+}
+
+int anm_get_active_animation_index(struct anm_node *node, int which)
+{
+	if(which < 0 || which >= 2) return -1;
+	return node->cur_anim[which];
+}
+
+struct anm_animation *anm_get_active_animation(struct anm_node *node, int which)
+{
+	int idx = anm_get_active_animation_index(node, which);
+	if(idx < 0 || idx >= anm_get_animation_count(node)) {
+		return 0;
+	}
+	return node->animations + idx;
+}
+
+float anm_get_active_animation_mix(struct anm_node *node)
+{
+	return node->cur_mix;
+}
+
+int anm_get_animation_count(struct anm_node *node)
+{
+	return dynarr_size(node->animations);
+}
+
+int anm_add_node_animation(struct anm_node *node)
+{
+	struct anm_animation newanim;
+	anm_init_animation(&newanim);
+
+	node->animations = dynarr_push(node->animations, &newanim);
+	return 0;
+}
+
+int anm_remove_node_animation(struct anm_node *node, int idx)
+{
+	fprintf(stderr, "anm_remove_animation: unimplemented!");
+	abort();
+	return 0;
+}
+
+int anm_add_animation(struct anm_node *node)
+{
+	struct anm_node *child;
+
+	if(anm_add_node_animation(node) == -1) {
+		return -1;
+	}
+
+	child = node->child;
+	while(child) {
+		if(anm_add_animation(child)) {
+			return -1;
+		}
+		child = child->next;
+	}
+	return 0;
+}
+
+int anm_remove_animation(struct anm_node *node, int idx)
+{
+	struct anm_node *child;
+
+	if(anm_remove_node_animation(node, idx) == -1) {
+		return -1;
+	}
+
+	child = node->child;
+	while(child) {
+		if(anm_remove_animation(child, idx) == -1) {
+			return -1;
+		}
+		child = child->next;
+	}
+	return 0;
+}
+
+struct anm_animation *anm_get_animation(struct anm_node *node, int idx)
+{
+	if(idx < 0 || idx > anm_get_animation_count(node)) {
+		return 0;
+	}
+	return node->animations + idx;
+}
+
+struct anm_animation *anm_get_animation_by_name(struct anm_node *node, const char *name)
+{
+	return anm_get_animation(node, anm_find_animation(node, name));
+}
+
+int anm_find_animation(struct anm_node *node, const char *name)
+{
+	int i, count = anm_get_animation_count(node);
+	for(i=0; i<count; i++) {
+		if(strcmp(node->animations[i].name, name) == 0) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+/* all the rest act on the current animation(s) */
+
+void anm_set_interpolator(struct anm_node *node, enum anm_interpolator in)
+{
+	int i;
+	struct anm_animation *anim = anm_get_active_animation(node, 0);
+	if(!anim) return;
+
+	for(i=0; i<ANM_NUM_TRACKS; i++) {
+		anm_set_track_interpolator(anim->tracks + i, in);
+	}
+	invalidate_cache(node);
+}
+
+void anm_set_extrapolator(struct anm_node *node, enum anm_extrapolator ex)
+{
+	int i;
+	struct anm_animation *anim = anm_get_active_animation(node, 0);
+	if(!anim) return;
+
+	for(i=0; i<ANM_NUM_TRACKS; i++) {
+		anm_set_track_extrapolator(anim->tracks + i, ex);
+	}
+	invalidate_cache(node);
+}
+
 void anm_set_position(struct anm_node *node, vec3_t pos, anm_time_t tm)
 {
-	anm_set_value(node->tracks + ANM_TRACK_POS_X, tm, pos.x);
-	anm_set_value(node->tracks + ANM_TRACK_POS_Y, tm, pos.y);
-	anm_set_value(node->tracks + ANM_TRACK_POS_Z, tm, pos.z);
+	struct anm_animation *anim = anm_get_active_animation(node, 0);
+	if(!anim) return;
+
+	anm_set_value(anim->tracks + ANM_TRACK_POS_X, tm, pos.x);
+	anm_set_value(anim->tracks + ANM_TRACK_POS_Y, tm, pos.y);
+	anm_set_value(anim->tracks + ANM_TRACK_POS_Z, tm, pos.z);
 	invalidate_cache(node);
 }
 
 vec3_t anm_get_node_position(struct anm_node *node, anm_time_t tm)
 {
 	vec3_t v;
-	v.x = anm_get_value(node->tracks + ANM_TRACK_POS_X, tm);
-	v.y = anm_get_value(node->tracks + ANM_TRACK_POS_Y, tm);
-	v.z = anm_get_value(node->tracks + ANM_TRACK_POS_Z, tm);
+	struct anm_animation *anim0 = anm_get_active_animation(node, 0);
+	struct anm_animation *anim1 = anm_get_active_animation(node, 1);
+
+	if(!anim0) {
+		return v3_cons(0, 0, 0);
+	}
+
+	v.x = anm_get_value(anim0->tracks + ANM_TRACK_POS_X, tm);
+	v.y = anm_get_value(anim0->tracks + ANM_TRACK_POS_Y, tm);
+	v.z = anm_get_value(anim0->tracks + ANM_TRACK_POS_Z, tm);
+
+	if(anim1) {
+		vec3_t v1;
+		v1.x = anm_get_value(anim1->tracks + ANM_TRACK_POS_X, tm);
+		v1.y = anm_get_value(anim1->tracks + ANM_TRACK_POS_Y, tm);
+		v1.z = anm_get_value(anim1->tracks + ANM_TRACK_POS_Z, tm);
+
+		v.x = v.x + (v1.x - v.x) * node->cur_mix;
+		v.y = v.y + (v1.y - v.y) * node->cur_mix;
+		v.z = v.z + (v1.z - v.z) * node->cur_mix;
+	}
+
 	return v;
 }
 
 void anm_set_rotation(struct anm_node *node, quat_t rot, anm_time_t tm)
 {
-	anm_set_value(node->tracks + ANM_TRACK_ROT_X, tm, rot.x);
-	anm_set_value(node->tracks + ANM_TRACK_ROT_Y, tm, rot.y);
-	anm_set_value(node->tracks + ANM_TRACK_ROT_Z, tm, rot.z);
-	anm_set_value(node->tracks + ANM_TRACK_ROT_W, tm, rot.w);
+	struct anm_animation *anim = anm_get_active_animation(node, 0);
+	if(!anim) return;
+
+	anm_set_value(anim->tracks + ANM_TRACK_ROT_X, tm, rot.x);
+	anm_set_value(anim->tracks + ANM_TRACK_ROT_Y, tm, rot.y);
+	anm_set_value(anim->tracks + ANM_TRACK_ROT_Z, tm, rot.z);
+	anm_set_value(anim->tracks + ANM_TRACK_ROT_W, tm, rot.w);
 	invalidate_cache(node);
 }
 
-quat_t anm_get_node_rotation(struct anm_node *node, anm_time_t tm)
+static quat_t get_node_rotation(struct anm_node *node, anm_time_t tm, struct anm_animation *anim)
 {
 #ifndef ROT_USE_SLERP
 	quat_t q;
-	q.x = anm_get_value(node->tracks + ANM_TRACK_ROT_X, tm);
-	q.y = anm_get_value(node->tracks + ANM_TRACK_ROT_Y, tm);
-	q.z = anm_get_value(node->tracks + ANM_TRACK_ROT_Z, tm);
-	q.w = anm_get_value(node->tracks + ANM_TRACK_ROT_W, tm);
+	q.x = anm_get_value(anim->tracks + ANM_TRACK_ROT_X, tm);
+	q.y = anm_get_value(anim->tracks + ANM_TRACK_ROT_Y, tm);
+	q.z = anm_get_value(anim->tracks + ANM_TRACK_ROT_Z, tm);
+	q.w = anm_get_value(anim->tracks + ANM_TRACK_ROT_W, tm);
 	return q;
 #else
 	int idx0, idx1, last_idx;
@@ -217,10 +471,10 @@ quat_t anm_get_node_rotation(struct anm_node *node, anm_time_t tm)
 	struct anm_track *track_x, *track_y, *track_z, *track_w;
 	quat_t q, q1, q2;
 
-	track_x = node->tracks + ANM_TRACK_ROT_X;
-	track_y = node->tracks + ANM_TRACK_ROT_Y;
-	track_z = node->tracks + ANM_TRACK_ROT_Z;
-	track_w = node->tracks + ANM_TRACK_ROT_W;
+	track_x = anim->tracks + ANM_TRACK_ROT_X;
+	track_y = anim->tracks + ANM_TRACK_ROT_Y;
+	track_z = anim->tracks + ANM_TRACK_ROT_Z;
+	track_w = anim->tracks + ANM_TRACK_ROT_W;
 
 	if(!track_x->count) {
 		q.x = track_x->def_val;
@@ -277,20 +531,62 @@ quat_t anm_get_node_rotation(struct anm_node *node, anm_time_t tm)
 #endif
 }
 
+quat_t anm_get_node_rotation(struct anm_node *node, anm_time_t tm)
+{
+	quat_t q;
+	struct anm_animation *anim0 = anm_get_active_animation(node, 0);
+	struct anm_animation *anim1 = anm_get_active_animation(node, 1);
+
+	if(!anim0) {
+		return quat_identity();
+	}
+
+	q = get_node_rotation(node, tm, anim0);
+
+	if(anim1) {
+		quat_t q1 = get_node_rotation(node, tm, anim1);
+
+		q = quat_slerp(q, q1, node->cur_mix);
+	}
+	return q;
+}
+
 void anm_set_scaling(struct anm_node *node, vec3_t scl, anm_time_t tm)
 {
-	anm_set_value(node->tracks + ANM_TRACK_SCL_X, tm, scl.x);
-	anm_set_value(node->tracks + ANM_TRACK_SCL_Y, tm, scl.y);
-	anm_set_value(node->tracks + ANM_TRACK_SCL_Z, tm, scl.z);
+	struct anm_animation *anim = anm_get_active_animation(node, 0);
+	if(!anim) return;
+
+	anm_set_value(anim->tracks + ANM_TRACK_SCL_X, tm, scl.x);
+	anm_set_value(anim->tracks + ANM_TRACK_SCL_Y, tm, scl.y);
+	anm_set_value(anim->tracks + ANM_TRACK_SCL_Z, tm, scl.z);
 	invalidate_cache(node);
 }
 
 vec3_t anm_get_node_scaling(struct anm_node *node, anm_time_t tm)
 {
 	vec3_t v;
-	v.x = anm_get_value(node->tracks + ANM_TRACK_SCL_X, tm);
-	v.y = anm_get_value(node->tracks + ANM_TRACK_SCL_Y, tm);
-	v.z = anm_get_value(node->tracks + ANM_TRACK_SCL_Z, tm);
+	struct anm_animation *anim0 = anm_get_active_animation(node, 0);
+	struct anm_animation *anim1 = anm_get_active_animation(node, 1);
+
+	if(!anim0) {
+		return v3_cons(1, 1, 1);
+	}
+
+	v.x = anm_get_value(anim0->tracks + ANM_TRACK_SCL_X, tm);
+	v.y = anm_get_value(anim0->tracks + ANM_TRACK_SCL_Y, tm);
+	v.z = anm_get_value(anim0->tracks + ANM_TRACK_SCL_Z, tm);
+
+	if(anim1) {
+		vec3_t v1;
+		v1.x = anm_get_value(anim1->tracks + ANM_TRACK_SCL_X, tm);
+		v1.y = anm_get_value(anim1->tracks + ANM_TRACK_SCL_Y, tm);
+		v1.z = anm_get_value(anim1->tracks + ANM_TRACK_SCL_Z, tm);
+
+		v.x = v.x + (v1.x - v.x) * node->cur_mix;
+		v.y = v.y + (v1.y - v.y) * node->cur_mix;
+		v.z = v.z + (v1.z - v.z) * node->cur_mix;
+	}
+
 	return v;
 }
 
@@ -332,16 +628,6 @@ vec3_t anm_get_scaling(struct anm_node *node, anm_time_t tm)
 
 	ps = anm_get_scaling(node->parent, tm);
 	return v3_mul(s, ps);
-}
-
-void anm_set_pivot(struct anm_node *node, vec3_t piv)
-{
-	node->pivot = piv;
-}
-
-vec3_t anm_get_pivot(struct anm_node *node)
-{
-	return node->pivot;
 }
 
 void anm_get_node_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm)
@@ -463,15 +749,20 @@ void anm_get_inv_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm)
 
 anm_time_t anm_get_start_time(struct anm_node *node)
 {
-	int i;
+	int i, j;
 	struct anm_node *c;
 	anm_time_t res = LONG_MAX;
 
-	for(i=0; i<ANM_NUM_TRACKS; i++) {
-		if(node->tracks[i].count) {
-			anm_time_t tm = node->tracks[i].keys[0].time;
-			if(tm < res) {
-				res = tm;
+	for(j=0; j<2; j++) {
+		struct anm_animation *anim = anm_get_active_animation(node, j);
+		if(!anim) break;
+
+		for(i=0; i<ANM_NUM_TRACKS; i++) {
+			if(anim->tracks[i].count) {
+				anm_time_t tm = anim->tracks[i].keys[0].time;
+				if(tm < res) {
+					res = tm;
+				}
 			}
 		}
 	}
@@ -489,15 +780,20 @@ anm_time_t anm_get_start_time(struct anm_node *node)
 
 anm_time_t anm_get_end_time(struct anm_node *node)
 {
-	int i;
+	int i, j;
 	struct anm_node *c;
 	anm_time_t res = LONG_MIN;
 
-	for(i=0; i<ANM_NUM_TRACKS; i++) {
-		if(node->tracks[i].count) {
-			anm_time_t tm = node->tracks[i].keys[node->tracks[i].count - 1].time;
-			if(tm > res) {
-				res = tm;
+	for(j=0; j<2; j++) {
+		struct anm_animation *anim = anm_get_active_animation(node, j);
+		if(!anim) break;
+
+		for(i=0; i<ANM_NUM_TRACKS; i++) {
+			if(anim->tracks[i].count) {
+				anm_time_t tm = anim->tracks[i].keys[anim->tracks[i].count - 1].time;
+				if(tm > res) {
+					res = tm;
+				}
 			}
 		}
 	}
