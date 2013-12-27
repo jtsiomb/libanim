@@ -44,6 +44,8 @@ void anm_set_animation_name(struct anm_animation *anim, const char *name)
 	char *newname = malloc(strlen(name) + 1);
 	if(!newname) return;
 
+	strcpy(newname, name);
+
 	free(anim->name);
 	anim->name = newname;
 }
@@ -411,6 +413,36 @@ void anm_set_extrapolator(struct anm_node *node, enum anm_extrapolator ex)
 		anm_set_track_extrapolator(anim->tracks + i, ex);
 	}
 	invalidate_cache(node);
+}
+
+void anm_set_node_active_animation_name(struct anm_node *node, const char *name)
+{
+	struct anm_animation *anim = anm_get_active_animation(node, 0);
+	if(!anim) return;
+
+	anm_set_animation_name(anim, name);
+}
+
+void anm_set_active_animation_name(struct anm_node *node, const char *name)
+{
+	struct anm_node *child;
+
+	anm_set_node_active_animation_name(node, name);
+
+	child = node->child;
+	while(child) {
+		anm_set_active_animation_name(child, name);
+		child = child->next;
+	}
+}
+
+const char *anm_get_active_animation_name(struct anm_node *node)
+{
+	struct anm_animation *anim = anm_get_active_animation(node, 0);
+	if(anim) {
+		return anim->name;
+	}
+	return 0;
 }
 
 void anm_set_position(struct anm_node *node, vec3_t pos, anm_time_t tm)
