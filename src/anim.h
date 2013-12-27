@@ -128,6 +128,14 @@ void anm_set_interpolator(struct anm_node *node, enum anm_interpolator in);
 /* set the extrapolator for the (first) currently active animation */
 void anm_set_extrapolator(struct anm_node *node, enum anm_extrapolator ex);
 
+/* set the name of the currently active animation of this node only */
+void anm_set_node_active_animation_name(struct anm_node *node, const char *name);
+/* recursively set the name of the currently active animation for this node
+ * and all it's descendants */
+void anm_set_active_animation_name(struct anm_node *node, const char *name);
+/* get the name of the currently active animation of this node */
+const char *anm_get_active_animation_name(struct anm_node *node);
+
 void anm_set_position(struct anm_node *node, vec3_t pos, anm_time_t tm);
 vec3_t anm_get_node_position(struct anm_node *node, anm_time_t tm);
 

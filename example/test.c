@@ -128,6 +128,7 @@ static void set_walk_animation(int idx)
 	int i;
 
 	anm_use_animation(root, idx);
+	anm_set_active_animation_name(root, "walk");
 
 	for(i=0; i<NUM_NODES; i++) {
 		anm_set_position(nodes[i], parts[i].pos, 0);
@@ -192,6 +193,7 @@ static void set_jump_animation(int idx)
 	int i;
 
 	anm_use_animation(root, idx);
+	anm_set_active_animation_name(root, "jump");
 
 	for(i=0; i<NUM_NODES; i++) {
 		anm_set_position(nodes[i], parts[i].pos, 0);
@@ -251,8 +253,13 @@ void disp(void)
 	glRotatef(cam_phi, 1, 0, 0);
 	glRotatef(cam_theta, 0, 1, 0);
 
+	/* animation blending if we're in transition */
 	if(cur_anim != next_anim) {
 		float t = (msec - trans_start_tm) / 1500.0;
+
+		struct anm_animation *from, *to;
+		from = anm_get_animation(root, cur_anim);
+		to = anm_get_animation(root, next_anim);
 
 		if(t >= 1.0) {
 			t = 1.0;
@@ -261,6 +268,12 @@ void disp(void)
 		} else {
 			anm_use_animations(root, cur_anim, next_anim, t);
 		}
+
+		printf("transitioning from \"%s\" to \"%s\": %.2f    \r", from->name, to->name, t);
+		if(cur_anim == next_anim) {
+			putchar('\n');
+		}
+		fflush(stdout);
 	}
 
 	/* first render a character with bottom-up lazy matrix calculation */
