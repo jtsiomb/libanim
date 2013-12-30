@@ -36,7 +36,11 @@ struct anm_node {
 	char *name;
 
 	int cur_anim[2];
+	anm_time_t cur_anim_offset[2];
 	float cur_mix;
+
+	/* high-level animation blending transition duration */
+	anm_time_t blend_dur;
 
 	struct anm_animation *animations;
 	vec3_t pivot;
@@ -68,6 +72,8 @@ void anm_destroy_animation(struct anm_animation *anim);
 void anm_set_animation_name(struct anm_animation *anim, const char *name);
 
 
+/* ---- node/hierarchy management ---- */
+
 /* node constructor and destructor */
 int anm_init_node(struct anm_node *node);
 void anm_destroy_node(struct anm_node *node);
@@ -95,6 +101,8 @@ int anm_unlink_node(struct anm_node *parent, struct anm_node *child);
 void anm_set_pivot(struct anm_node *node, vec3_t pivot);
 vec3_t anm_get_pivot(struct anm_node *node);
 
+/* ---- multiple animations and animation blending ---- */
+
 /* set active animation(s) */
 int anm_use_node_animation(struct anm_node *node, int aidx);
 int anm_use_node_animations(struct anm_node *node, int aidx, int bidx, float t);
@@ -102,13 +110,19 @@ int anm_use_node_animations(struct anm_node *node, int aidx, int bidx, float t);
 int anm_use_animation(struct anm_node *node, int aidx);
 int anm_use_animations(struct anm_node *node, int aidx, int bidx, float t);
 
-/* returns the requested current animation index, which can be 0 or 1 */
-int anm_get_active_animation_index(struct anm_node *node, int which);
-/* returns the requested current animation, which can be 0 or 1 */
-struct anm_animation *anm_get_active_animation(struct anm_node *node, int which);
-float anm_get_active_animation_mix(struct anm_node *node);
+/* set/get current animation offset(s) */
+void anm_set_node_animation_offset(struct anm_node *node, anm_time_t offs, int which);
+anm_time_t anm_get_animation_offset(const struct anm_node *node, int which);
+/* recursive variant */
+void anm_set_animation_offset(struct anm_node *node, anm_time_t offs, int which);
 
-int anm_get_animation_count(struct anm_node *node);
+/* returns the requested current animation index, which can be 0 or 1 */
+int anm_get_active_animation_index(const struct anm_node *node, int which);
+/* returns the requested current animation, which can be 0 or 1 */
+struct anm_animation *anm_get_active_animation(const struct anm_node *node, int which);
+float anm_get_active_animation_mix(const struct anm_node *node);
+
+int anm_get_animation_count(const struct anm_node *node);
 
 /* add/remove an animation to the specified node */
 int anm_add_node_animation(struct anm_node *node);
@@ -136,6 +150,26 @@ void anm_set_active_animation_name(struct anm_node *node, const char *name);
 /* get the name of the currently active animation of this node */
 const char *anm_get_active_animation_name(struct anm_node *node);
 
+
+/* ---- high level animation blending interface ---- */
+/* XXX this convenience interface assumes monotonically increasing time values
+ *     in all subsequent calls to anm_get_* and anm_eval_* functions.
+ *
+ * anmidx: index of the animation to transition to
+ * start: when to start the transition
+ * dur: transition duration
+ *
+ * sets up a transition from the current animation (cur_anim[0]) to another animation.
+ * at time start + dur, the transition will be completed, cur_anim[0] will be the new
+ * animation and cur_anim_offset[0] will be equal to start.
+ */
+void anm_transition(struct anm_node *node, int anmidx, anm_time_t start, anm_time_t dur);
+/* non-recursive variant, acts on a single node (you probably DON'T want to use this) */
+void anm_node_transition(struct anm_node *node, int anmidx, anm_time_t start, anm_time_t dur);
+
+
+/* ---- keyframes / PRS interpolation ---- */
+
 void anm_set_position(struct anm_node *node, vec3_t pos, anm_time_t tm);
 vec3_t anm_get_node_position(struct anm_node *node, anm_time_t tm);
 
@@ -153,6 +187,9 @@ vec3_t anm_get_scaling(struct anm_node *node, anm_time_t tm);
 /* those return the start and end times of the whole tree */
 anm_time_t anm_get_start_time(struct anm_node *node);
 anm_time_t anm_get_end_time(struct anm_node *node);
+
+
+/* ---- transformation matrices ---- */
 
 /* these calculate the matrix and inverse matrix of this node alone */
 void anm_get_node_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm);

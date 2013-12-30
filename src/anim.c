@@ -57,7 +57,6 @@ int anm_init_node(struct anm_node *node)
 	memset(node, 0, sizeof *node);
 
 	node->cur_anim[1] = -1;
-	node->cur_mix = 0;
 
 	if(!(node->animations = dynarr_alloc(1, sizeof *node->animations))) {
 		return -1;
@@ -222,6 +221,7 @@ int anm_use_node_animation(struct anm_node *node, int aidx)
 	node->cur_anim[0] = aidx;
 	node->cur_anim[1] = -1;
 	node->cur_mix = 0;
+	node->blend_dur = -1;
 
 	invalidate_cache(node);
 	return 0;
@@ -288,13 +288,40 @@ int anm_use_animations(struct anm_node *node, int aidx, int bidx, float t)
 
 }
 
-int anm_get_active_animation_index(struct anm_node *node, int which)
+void anm_set_node_animation_offset(struct anm_node *node, anm_time_t offs, int which)
+{
+	if(which < 0 || which >= 2) {
+		return;
+	}
+	node->cur_anim_offset[which] = offs;
+}
+
+anm_time_t anm_get_animation_offset(const struct anm_node *node, int which)
+{
+	if(which < 0 || which >= 2) {
+		return 0;
+	}
+	return node->cur_anim_offset[which];
+}
+
+void anm_set_animation_offset(struct anm_node *node, anm_time_t offs, int which)
+{
+	struct anm_node *c = node->child;
+	while(c) {
+		anm_set_animation_offset(c, offs, which);
+		c = c->next;
+	}
+
+	anm_set_node_animation_offset(node, offs, which);
+}
+
+int anm_get_active_animation_index(const struct anm_node *node, int which)
 {
 	if(which < 0 || which >= 2) return -1;
 	return node->cur_anim[which];
 }
 
-struct anm_animation *anm_get_active_animation(struct anm_node *node, int which)
+struct anm_animation *anm_get_active_animation(const struct anm_node *node, int which)
 {
 	int idx = anm_get_active_animation_index(node, which);
 	if(idx < 0 || idx >= anm_get_animation_count(node)) {
@@ -303,12 +330,12 @@ struct anm_animation *anm_get_active_animation(struct anm_node *node, int which)
 	return node->animations + idx;
 }
 
-float anm_get_active_animation_mix(struct anm_node *node)
+float anm_get_active_animation_mix(const struct anm_node *node)
 {
 	return node->cur_mix;
 }
 
-int anm_get_animation_count(struct anm_node *node)
+int anm_get_animation_count(const struct anm_node *node)
 {
 	return dynarr_size(node->animations);
 }
@@ -445,6 +472,50 @@ const char *anm_get_active_animation_name(struct anm_node *node)
 	return 0;
 }
 
+/* ---- high level animation blending ---- */
+void anm_transition(struct anm_node *node, int anmidx, anm_time_t start, anm_time_t dur)
+{
+	struct anm_node *c = node->child;
+	while(c) {
+		anm_transition(c, anmidx, start, dur);
+		c = c->next;
+	}
+
+	anm_node_transition(node, anmidx, start, dur);
+}
+
+void anm_node_transition(struct anm_node *node, int anmidx, anm_time_t start, anm_time_t dur)
+{
+	node->cur_anim[1] = anmidx;
+	node->cur_anim_offset[1] = start;
+	node->blend_dur = dur;
+}
+
+
+#define BLEND_START_TM	node->cur_anim_offset[1]
+
+static anm_time_t animation_time(struct anm_node *node, anm_time_t tm, int which)
+{
+	float t;
+
+	if(node->blend_dur >= 0) {
+		/* we're in transition... */
+		t = (float)(tm - BLEND_START_TM) / (float)node->blend_dur;
+		if(t < 0.0) t = 0.0;
+
+		node->cur_mix = t;
+
+		if(t > 1.0) {
+			/* switch completely over to the target animation and stop blending */
+			anm_use_node_animation(node, node->cur_anim[1]);
+			node->cur_anim_offset[0] = node->cur_anim_offset[1];
+		}
+	}
+
+	return tm - node->cur_anim_offset[which];
+}
+
+
 void anm_set_position(struct anm_node *node, vec3_t pos, anm_time_t tm)
 {
 	struct anm_animation *anim = anm_get_active_animation(node, 0);
@@ -456,9 +527,11 @@ void anm_set_position(struct anm_node *node, vec3_t pos, anm_time_t tm)
 	invalidate_cache(node);
 }
 
+
 vec3_t anm_get_node_position(struct anm_node *node, anm_time_t tm)
 {
 	vec3_t v;
+	anm_time_t tm0 = animation_time(node, tm, 0);
 	struct anm_animation *anim0 = anm_get_active_animation(node, 0);
 	struct anm_animation *anim1 = anm_get_active_animation(node, 1);
 
@@ -466,15 +539,16 @@ vec3_t anm_get_node_position(struct anm_node *node, anm_time_t tm)
 		return v3_cons(0, 0, 0);
 	}
 
-	v.x = anm_get_value(anim0->tracks + ANM_TRACK_POS_X, tm);
-	v.y = anm_get_value(anim0->tracks + ANM_TRACK_POS_Y, tm);
-	v.z = anm_get_value(anim0->tracks + ANM_TRACK_POS_Z, tm);
+	v.x = anm_get_value(anim0->tracks + ANM_TRACK_POS_X, tm0);
+	v.y = anm_get_value(anim0->tracks + ANM_TRACK_POS_Y, tm0);
+	v.z = anm_get_value(anim0->tracks + ANM_TRACK_POS_Z, tm0);
 
 	if(anim1) {
 		vec3_t v1;
-		v1.x = anm_get_value(anim1->tracks + ANM_TRACK_POS_X, tm);
-		v1.y = anm_get_value(anim1->tracks + ANM_TRACK_POS_Y, tm);
-		v1.z = anm_get_value(anim1->tracks + ANM_TRACK_POS_Z, tm);
+		anm_time_t tm1 = animation_time(node, tm, 1);
+		v1.x = anm_get_value(anim1->tracks + ANM_TRACK_POS_X, tm1);
+		v1.y = anm_get_value(anim1->tracks + ANM_TRACK_POS_Y, tm1);
+		v1.z = anm_get_value(anim1->tracks + ANM_TRACK_POS_Z, tm1);
 
 		v.x = v.x + (v1.x - v.x) * node->cur_mix;
 		v.y = v.y + (v1.y - v.y) * node->cur_mix;
@@ -575,6 +649,7 @@ static quat_t get_node_rotation(struct anm_node *node, anm_time_t tm, struct anm
 quat_t anm_get_node_rotation(struct anm_node *node, anm_time_t tm)
 {
 	quat_t q;
+	anm_time_t tm0 = animation_time(node, tm, 0);
 	struct anm_animation *anim0 = anm_get_active_animation(node, 0);
 	struct anm_animation *anim1 = anm_get_active_animation(node, 1);
 
@@ -582,10 +657,11 @@ quat_t anm_get_node_rotation(struct anm_node *node, anm_time_t tm)
 		return quat_identity();
 	}
 
-	q = get_node_rotation(node, tm, anim0);
+	q = get_node_rotation(node, tm0, anim0);
 
 	if(anim1) {
-		quat_t q1 = get_node_rotation(node, tm, anim1);
+		anm_time_t tm1 = animation_time(node, tm, 1);
+		quat_t q1 = get_node_rotation(node, tm1, anim1);
 
 		q = quat_slerp(q, q1, node->cur_mix);
 	}
@@ -606,6 +682,7 @@ void anm_set_scaling(struct anm_node *node, vec3_t scl, anm_time_t tm)
 vec3_t anm_get_node_scaling(struct anm_node *node, anm_time_t tm)
 {
 	vec3_t v;
+	anm_time_t tm0 = animation_time(node, tm, 0);
 	struct anm_animation *anim0 = anm_get_active_animation(node, 0);
 	struct anm_animation *anim1 = anm_get_active_animation(node, 1);
 
@@ -613,15 +690,16 @@ vec3_t anm_get_node_scaling(struct anm_node *node, anm_time_t tm)
 		return v3_cons(1, 1, 1);
 	}
 
-	v.x = anm_get_value(anim0->tracks + ANM_TRACK_SCL_X, tm);
-	v.y = anm_get_value(anim0->tracks + ANM_TRACK_SCL_Y, tm);
-	v.z = anm_get_value(anim0->tracks + ANM_TRACK_SCL_Z, tm);
+	v.x = anm_get_value(anim0->tracks + ANM_TRACK_SCL_X, tm0);
+	v.y = anm_get_value(anim0->tracks + ANM_TRACK_SCL_Y, tm0);
+	v.z = anm_get_value(anim0->tracks + ANM_TRACK_SCL_Z, tm0);
 
 	if(anim1) {
 		vec3_t v1;
-		v1.x = anm_get_value(anim1->tracks + ANM_TRACK_SCL_X, tm);
-		v1.y = anm_get_value(anim1->tracks + ANM_TRACK_SCL_Y, tm);
-		v1.z = anm_get_value(anim1->tracks + ANM_TRACK_SCL_Z, tm);
+		anm_time_t tm1 = animation_time(node, tm, 1);
+		v1.x = anm_get_value(anim1->tracks + ANM_TRACK_SCL_X, tm1);
+		v1.y = anm_get_value(anim1->tracks + ANM_TRACK_SCL_Y, tm1);
+		v1.z = anm_get_value(anim1->tracks + ANM_TRACK_SCL_Z, tm1);
 
 		v.x = v.x + (v1.x - v.x) * node->cur_mix;
 		v.y = v.y + (v1.y - v.y) * node->cur_mix;
