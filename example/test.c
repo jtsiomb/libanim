@@ -23,7 +23,7 @@ struct body_part {
 	{{0, -2.1, 0},		{0, 1, 0},		{0.8, 2, 0.8},	{1, 0.5, 0.5}},	/* left-lower leg */
 	{{0, -2.1, 0},		{0, 1, 0},		{0.8, 2, 0.8},	{0.5, 1, 0.5}},	/* right-lower leg */
 
-	{{0, 2.6, 0},		{0, -0.5, 0},	{1.2, 1.2, 1.2},{0, 1, 1}},	/* head */
+	{{0, 2.6, 0},		{0, -0.5, 0},	{1.2, 1.2, 1.2},{0, 1, 1}},		/* head */
 
 	{{-1.3, 0.4, 0},		{0, 1, 0},		{0.8, 2, 0.8},	{0, 0, 1}},	/* left-upper arm */
 	{{1.3, 0.4, 0},		{0, 1, 0},		{0.8, 2, 0.8},	{1, 1, 0}},		/* right-upper arm */
@@ -253,29 +253,6 @@ void disp(void)
 	glRotatef(cam_phi, 1, 0, 0);
 	glRotatef(cam_theta, 0, 1, 0);
 
-	/* animation blending if we're in transition */
-	if(cur_anim != next_anim) {
-		float t = (msec - trans_start_tm) / 1500.0;
-
-		struct anm_animation *from, *to;
-		from = anm_get_animation(root, cur_anim);
-		to = anm_get_animation(root, next_anim);
-
-		if(t >= 1.0) {
-			t = 1.0;
-			cur_anim = next_anim;
-			anm_use_animation(root, cur_anim);
-		} else {
-			anm_use_animations(root, cur_anim, next_anim, t);
-		}
-
-		printf("transitioning from \"%s\" to \"%s\": %.2f    \r", from->name, to->name, t);
-		if(cur_anim == next_anim) {
-			putchar('\n');
-		}
-		fflush(stdout);
-	}
-
 	/* first render a character with bottom-up lazy matrix calculation */
 	glPushMatrix();
 	glTranslatef(-2.5, 0, 0);
@@ -358,8 +335,10 @@ void keyb(unsigned char key, int x, int y)
 		exit(0);
 
 	case ' ':
+		cur_anim = anm_get_active_animation_index(root, 0);
 		next_anim = (cur_anim + 1) % 2;
 		trans_start_tm = glutGet(GLUT_ELAPSED_TIME);
+		anm_transition(root, next_anim, trans_start_tm, 1500);
 		break;
 	}
 }
