@@ -476,6 +476,11 @@ const char *anm_get_active_animation_name(struct anm_node *node)
 void anm_transition(struct anm_node *node, int anmidx, anm_time_t start, anm_time_t dur)
 {
 	struct anm_node *c = node->child;
+
+	if(anmidx == node->cur_anim[0]) {
+		return;
+	}
+
 	while(c) {
 		anm_transition(c, anmidx, start, dur);
 		c = c->next;
@@ -486,6 +491,10 @@ void anm_transition(struct anm_node *node, int anmidx, anm_time_t start, anm_tim
 
 void anm_node_transition(struct anm_node *node, int anmidx, anm_time_t start, anm_time_t dur)
 {
+	if(anmidx == node->cur_anim[0]) {
+		return;
+	}
+
 	node->cur_anim[1] = anmidx;
 	node->cur_anim_offset[1] = start;
 	node->blend_dur = dur;
