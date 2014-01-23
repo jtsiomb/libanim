@@ -75,10 +75,11 @@ int anm_init_node(struct anm_node *node)
 
 void anm_destroy_node(struct anm_node *node)
 {
-	int i;
+	int i, num_anim;
 	free(node->name);
 
-	for(i=0; i<ANM_NUM_TRACKS; i++) {
+	num_anim = anm_get_animation_count(node);
+	for(i=0; i<num_anim; i++) {
 		anm_destroy_animation(node->animations + i);
 	}
 	dynarr_free(node->animations);
