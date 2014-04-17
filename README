@@ -1,0 +1,10 @@
+libanim
+-------
+A general-purpose hierarchical keyframe animation library
+
+Libanim is a C animation library, which can be used as a generic framework to
+add keyframe interpolation tracks for any single-valued or 3-vector parameters,
+or at a slightly higher level as a hierarchical PRS (position/rotation/scaling)
+animation node framework for 3D graphics programs.
+
+Libanim depends on libvmath (http://code.google.com/p/libvmath)
