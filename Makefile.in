@@ -5,7 +5,7 @@ dep = $(obj:.o=.d)
 lib_a = libanim.a
 
 ifeq ($(shell uname -s), Darwin)
-	lib_so = anim.dylib
+	lib_so = libanim.dylib
 	shared = -dynamiclib
 else
 	somajor = 0
