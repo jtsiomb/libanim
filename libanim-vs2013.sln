@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libanim", "libanim-vs2012.vcxproj", "{D8F5A227-C3D7-45EC-9F2F-720B97D21C4B}"
+# Visual Studio 2013
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libanim", "libanim-vs2013.vcxproj", "{D8F5A227-C3D7-45EC-9F2F-720B97D21C4B}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example", "example\example-vs2012.vcxproj", "{0121AD8F-6279-4AC6-9CD4-EDBC798BC498}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example", "example\example-vs2013.vcxproj", "{0121AD8F-6279-4AC6-9CD4-EDBC798BC498}"
 	ProjectSection(ProjectDependencies) = postProject
 		{D8F5A227-C3D7-45EC-9F2F-720B97D21C4B} = {D8F5A227-C3D7-45EC-9F2F-720B97D21C4B}
 	EndProjectSection
