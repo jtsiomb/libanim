@@ -957,8 +957,15 @@ anm_time_t anm_get_end_time(struct anm_node *node)
 
 static void invalidate_cache(struct anm_node *node)
 {
+	struct anm_node *c;
 	struct mat_cache *cache = pthread_getspecific(node->cache_key);
 	if(cache) {
 	   cache->time = cache->inv_time = ANM_TIME_INVAL;
+	}
+
+	c = node->child;
+	while(c) {
+		invalidate_cache(c);
+		c = c->next;
 	}
 }
