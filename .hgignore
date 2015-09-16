@@ -5,3 +5,8 @@
 ^libanim.so
 ^libanim.dylib
 ^Makefile$
+Debug/
+Release/
+\.sdf$
+\.suo$
+\.user$

@@ -4,9 +4,13 @@ obj = $(src:.c=.o)
 dep = $(obj:.o=.d)
 lib_a = libanim.a
 
-ifeq ($(shell uname -s), Darwin)
+sys := $(patsubst MINGW32%,MINGW32,$(shell uname -s))
+ifeq ($(sys), Darwin)
 	lib_so = libanim.dylib
 	shared = -dynamiclib
+else ifeq ($(sys), MINGW32)
+	lib_so = libanim.dll
+	shared = -shared
 else
 	somajor = 0
 	sominor = 1
@@ -14,12 +18,13 @@ else
 	lib_so = $(soname).$(sominor)
 	solink = libanim.so
 	shared = -shared -Wl,-soname,$(soname)
+	pic = -fPIC
 endif
 
 
 CC = gcc
 AR = ar
-CFLAGS = $(opt) $(dbg) -pedantic -Wall -fPIC -I$(PREFIX)/include
+CFLAGS = $(opt) $(dbg) -pedantic -Wall $(pic) -I$(PREFIX)/include
 LDFLAGS = -L$(PREFIX)/lib -lvmath -lm -lpthread
 
 .PHONY: all
