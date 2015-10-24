@@ -1,6 +1,6 @@
 /*
 libanim - hierarchical keyframe animation library
-Copyright (C) 2012-2014 John Tsiombikas <nuclear@member.fsf.org>
+Copyright (C) 2012-2015 John Tsiombikas <nuclear@member.fsf.org>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published
@@ -299,7 +299,7 @@ static anm_time_t remap_clamp(anm_time_t tm, anm_time_t start, anm_time_t end)
 	if(start == end) {
 		return start;
 	}
-	return tm < start ? start : (tm >= end ? end - 1 : tm);
+	return tm < start ? start : (tm >= end ? end : tm);
 }
 
 static anm_time_t remap_repeat(anm_time_t tm, anm_time_t start, anm_time_t end)
