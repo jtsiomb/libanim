@@ -11,16 +11,16 @@ animation node framework for 3D graphics programs.
 Version 2 of libanim dropped the dependency to libvmath, and instead carries a
 copy of gph-cmath (https://github.com/jtsiomb/gph-cmath) internally. The API
 has been reworked to avoid forcing a dependency to any math library to the user
-program, relying on floats and float pointers, which can be aliased to any kind
-contiguous `x,y,z` vector and `x,y,z,w` quaternion, or simple arrays of floats.
-Matrix arguments are expected to be arrays of 16 contiguous floats, in
-OpenGL-compatible order.
+program, relying on floats and float pointers instead, which can be aliased to
+any kind contiguous `x,y,z` vector and `x,y,z,w` quaternion, or simple arrays
+of floats. Matrix arguments are expected to be arrays of 16 contiguous floats,
+in OpenGL-compatible order.
 
-Programs written for earlier versions of libanim, and using the high-level
-p/r/s interface in `anim.h` are not source-compatible, nor binary-compatible
-with libanim 2. Though in practice the API changes are minor, and porting
-should be straightforward. Programs using only the low-level keyframe tracks in
-`track.h` are unaffected by these changes.
+Programs written for earlier versions of libanim, and using the high-level PRS
+interface in `anim.h` are not source-compatible, nor binary-compatible with
+libanim 2. Though in practice the API changes are minor, and porting should be
+straightforward. Programs using only the low-level keyframe tracks in `track.h`
+are unaffected by these changes.
 
 License
 -------
