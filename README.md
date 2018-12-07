@@ -27,5 +27,6 @@ License
 Copyright (C) 2012-2018 John Tsiombikas <nuclear@member.fsf.org>
 
 This program is free software. You may use, modify, and redistribute it under
-the terms of the GNU General Public License v3 or (at your option), any later
-version published by the Free Software Foundation.
+the terms of the GNU Lesser General Public License v3 or (at your option), any
+later version published by the Free Software Foundation. See COPYING and
+COPYING.LESSER for details.
