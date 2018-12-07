@@ -1,6 +1,6 @@
 /*
 libanim - hierarchical keyframe animation library
-Copyright (C) 2012-2014 John Tsiombikas <nuclear@member.fsf.org>
+Copyright (C) 2012-2018 John Tsiombikas <nuclear@member.fsf.org>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License as published
@@ -23,11 +23,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #if _MSC_VER >= 1900
 #define _TIMESPEC_DEFINED
 #endif
-#include <pthread.h>
 
-#include <vmath/vector.h>
-#include <vmath/quat.h>
-#include <vmath/matrix.h>
+#ifdef ANIM_THREAD_SAFE
+#include <pthread.h>
+#endif
+
 #include "track.h"
 
 enum {
@@ -63,19 +63,23 @@ struct anm_node {
 	anm_time_t blend_dur;
 
 	struct anm_animation *animations;
-	vec3_t pivot;
+	float pivot[3];
 
 	/* matrix cache */
 	struct mat_cache {
-		mat4_t matrix, inv_matrix;
+		float matrix[16], inv_matrix[16];
 		anm_time_t time, inv_time;
 		struct mat_cache *next;
+#ifdef ANIM_THREAD_SAFE
 	} *cache_list;
 	pthread_key_t cache_key;
 	pthread_mutex_t cache_list_lock;
+#else
+	} cache;
+#endif
 
 	/* matrix calculated by anm_eval functions (no locking, meant as a pre-pass) */
-	mat4_t matrix;
+	float matrix[16];
 
 	struct anm_node *parent;
 	struct anm_node *child;
@@ -118,8 +122,8 @@ const char *anm_get_node_name(struct anm_node *node);
 void anm_link_node(struct anm_node *parent, struct anm_node *child);
 int anm_unlink_node(struct anm_node *parent, struct anm_node *child);
 
-void anm_set_pivot(struct anm_node *node, vec3_t pivot);
-vec3_t anm_get_pivot(struct anm_node *node);
+void anm_set_pivot(struct anm_node *node, float x, float y, float z);
+void anm_get_pivot(struct anm_node *node, float *x, float *y, float *z);
 
 /* ---- multiple animations and animation blending ---- */
 
@@ -190,19 +194,23 @@ void anm_node_transition(struct anm_node *node, int anmidx, anm_time_t start, an
 
 /* ---- keyframes / PRS interpolation ---- */
 
-void anm_set_position(struct anm_node *node, vec3_t pos, anm_time_t tm);
-vec3_t anm_get_node_position(struct anm_node *node, anm_time_t tm);
+void anm_set_position(struct anm_node *node, const float *pos, anm_time_t tm);
+void anm_set_position3f(struct anm_node *node, float x, float y, float z, anm_time_t tm);
+void anm_get_node_position(struct anm_node *node, float *pos, anm_time_t tm);
 
-void anm_set_rotation(struct anm_node *node, quat_t rot, anm_time_t tm);
-quat_t anm_get_node_rotation(struct anm_node *node, anm_time_t tm);
+void anm_set_rotation(struct anm_node *node, const float *qrot, anm_time_t tm);
+void anm_set_rotation4f(struct anm_node *node, float x, float y, float z, float w, anm_time_t tm);
+void anm_set_rotation_axis(struct anm_node *node, float angle, float x, float y, float z, anm_time_t tm);
+void anm_get_node_rotation(struct anm_node *node, float *qrot, anm_time_t tm);
 
-void anm_set_scaling(struct anm_node *node, vec3_t scl, anm_time_t tm);
-vec3_t anm_get_node_scaling(struct anm_node *node, anm_time_t tm);
+void anm_set_scaling(struct anm_node *node, const float *scale, anm_time_t tm);
+void anm_set_scaling3f(struct anm_node *node, float x, float y, float z, anm_time_t tm);
+void anm_get_node_scaling(struct anm_node *node, float *scale, anm_time_t tm);
 
 /* these three return the full p/r/s taking hierarchy into account */
-vec3_t anm_get_position(struct anm_node *node, anm_time_t tm);
-quat_t anm_get_rotation(struct anm_node *node, anm_time_t tm);
-vec3_t anm_get_scaling(struct anm_node *node, anm_time_t tm);
+void anm_get_position(struct anm_node *node, float *pos, anm_time_t tm);
+void anm_get_rotation(struct anm_node *node, float *qrot, anm_time_t tm);
+void anm_get_scaling(struct anm_node *node, float *scale, anm_time_t tm);
 
 /* those return the start and end times of the whole tree */
 anm_time_t anm_get_start_time(struct anm_node *node);
@@ -212,8 +220,8 @@ anm_time_t anm_get_end_time(struct anm_node *node);
 /* ---- transformation matrices ---- */
 
 /* these calculate the matrix and inverse matrix of this node alone */
-void anm_get_node_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm);
-void anm_get_node_inv_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm);
+void anm_get_node_matrix(struct anm_node *node, float *mat, anm_time_t tm);
+void anm_get_node_inv_matrix(struct anm_node *node, float *mat, anm_time_t tm);
 
 /* ---- top-down matrix calculation interface ---- */
 
@@ -228,9 +236,12 @@ void anm_eval(struct anm_node *node, anm_time_t tm);
 /* These calculate the matrix and inverse matrix of this node taking hierarchy
  * into account. The results are cached in thread-specific storage and returned
  * if there's no change in time or tracks from the last query...
+ *
+ * A pointer to the internal cached matrix is returned, and also if mat is not
+ * null, the matrix is copied there.
  */
-void anm_get_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm);
-void anm_get_inv_matrix(struct anm_node *node, mat4_t mat, anm_time_t tm);
+float *anm_get_matrix(struct anm_node *node, float *mat, anm_time_t tm);
+float *anm_get_inv_matrix(struct anm_node *node, float *mat, anm_time_t tm);
 
 #ifdef __cplusplus
 }

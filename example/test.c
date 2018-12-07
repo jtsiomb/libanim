@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <math.h>
 #include <stdlib.h>
 #include <assert.h>
 
@@ -8,28 +9,29 @@
 #include <GLUT/glut.h>
 #endif
 
-#include <vmath/vmath.h>
 #include "anim.h"
 
+#define DEG_TO_RAD(x)	((x) / 180.0 * M_PI)
+
 struct body_part {
-	vec3_t pos, pivot, sz, color;
+	float pos[3], pivot[3], sz[3], color[4];
 } parts[] = {
 	/* position			pivot			size			color */
-	{{0, 1, 0},			{0, -1, 0},		{1.8, 2.8, 0.8},{1, 0, 1}},		/* torso */
+	{{0, 1, 0},			{0, -1, 0},		{1.8, 2.8, 0.8},{1, 0, 1, 1}},		/* torso */
 
-	{{-0.5, -2.5, 0},	{0, 1, 0},		{0.8, 2, 0.8},	{1, 0, 0}},		/* left-upper leg */
-	{{0.5, -2.5, 0},	{0, 1, 0},		{0.8, 2, 0.8},	{0, 1, 0}},		/* right-upper leg */
+	{{-0.5, -2.5, 0},	{0, 1, 0},		{0.8, 2, 0.8},	{1, 0, 0, 1}},		/* left-upper leg */
+	{{0.5, -2.5, 0},	{0, 1, 0},		{0.8, 2, 0.8},	{0, 1, 0, 1}},		/* right-upper leg */
 
-	{{0, -2.1, 0},		{0, 1, 0},		{0.8, 2, 0.8},	{1, 0.5, 0.5}},	/* left-lower leg */
-	{{0, -2.1, 0},		{0, 1, 0},		{0.8, 2, 0.8},	{0.5, 1, 0.5}},	/* right-lower leg */
+	{{0, -2.1, 0},		{0, 1, 0},		{0.8, 2, 0.8},	{1, 0.5, 0.5, 1}},	/* left-lower leg */
+	{{0, -2.1, 0},		{0, 1, 0},		{0.8, 2, 0.8},	{0.5, 1, 0.5, 1}},	/* right-lower leg */
 
-	{{0, 2.6, 0},		{0, -0.5, 0},	{1.2, 1.2, 1.2},{0, 1, 1}},		/* head */
+	{{0, 2.6, 0},		{0, -0.5, 0},	{1.2, 1.2, 1.2},{0, 1, 1, 1}},		/* head */
 
-	{{-1.3, 0.4, 0},		{0, 1, 0},		{0.8, 2, 0.8},	{0, 0, 1}},	/* left-upper arm */
-	{{1.3, 0.4, 0},		{0, 1, 0},		{0.8, 2, 0.8},	{1, 1, 0}},		/* right-upper arm */
+	{{-1.3, 0.4, 0},	{0, 1, 0},		{0.8, 2, 0.8},	{0, 0, 1, 1}},		/* left-upper arm */
+	{{1.3, 0.4, 0},		{0, 1, 0},		{0.8, 2, 0.8},	{1, 1, 0, 1}},		/* right-upper arm */
 
-	{{0, -2.1, 0},		{0, 1, 0},		{0.8, 2, 0.8},	{0.5, 0.5, 1}},	/* left-lower arm */
-	{{0, -2.1, 0},		{0, 1, 0},		{0.8, 2, 0.8},	{1, 1, 0.5}},	/* right-lower arm */
+	{{0, -2.1, 0},		{0, 1, 0},		{0.8, 2, 0.8},	{0.5, 0.5, 1, 1}},	/* left-lower arm */
+	{{0, -2.1, 0},		{0, 1, 0},		{0.8, 2, 0.8},	{1, 1, 0.5, 1}},	/* right-lower arm */
 };
 
 enum {
@@ -99,7 +101,7 @@ int init(void)
 
 	for(i=0; i<NUM_NODES; i++) {
 		nodes[i] = anm_create_node();
-		anm_set_pivot(nodes[i], parts[i].pivot);
+		anm_set_pivot(nodes[i], parts[i].pivot[0], parts[i].pivot[1], parts[i].pivot[2]);
 	}
 	root = nodes[0];
 
@@ -136,61 +138,62 @@ static void set_walk_animation(int idx)
 	}
 
 	/* upper leg animation */
-	anm_set_rotation(nodes[NODE_LEFT_UPPER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(-15), 1, 0, 0), 0);
-	anm_set_rotation(nodes[NODE_LEFT_UPPER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(45), 1, 0, 0), 1000);
-	anm_set_rotation(nodes[NODE_LEFT_UPPER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(-15), 1, 0, 0), 2000);
+	anm_set_rotation_axis(nodes[NODE_LEFT_UPPER_LEG], DEG_TO_RAD(-15), 1, 0, 0, 0);
+	anm_set_rotation_axis(nodes[NODE_LEFT_UPPER_LEG], DEG_TO_RAD(45), 1, 0, 0, 1000);
+	anm_set_rotation_axis(nodes[NODE_LEFT_UPPER_LEG], DEG_TO_RAD(-15), 1, 0, 0, 2000);
 
-	anm_set_rotation(nodes[NODE_RIGHT_UPPER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(45), 1, 0, 0), 0);
-	anm_set_rotation(nodes[NODE_RIGHT_UPPER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(-15), 1, 0, 0), 1000);
-	anm_set_rotation(nodes[NODE_RIGHT_UPPER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(45), 1, 0, 0), 2000);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_UPPER_LEG], DEG_TO_RAD(45), 1, 0, 0, 0);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_UPPER_LEG], DEG_TO_RAD(-15), 1, 0, 0, 1000);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_UPPER_LEG], DEG_TO_RAD(45), 1, 0, 0, 2000);
 
 	/* lower leg animation */
-	anm_set_rotation(nodes[NODE_LEFT_LOWER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 0);
-	anm_set_rotation(nodes[NODE_LEFT_LOWER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(-90), 1, 0, 0), 500);
-	anm_set_rotation(nodes[NODE_LEFT_LOWER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(-10), 1, 0, 0), 1000);
-	anm_set_rotation(nodes[NODE_LEFT_LOWER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 2000);
+	anm_set_rotation_axis(nodes[NODE_LEFT_LOWER_LEG], DEG_TO_RAD(0), 1, 0, 0, 0);
+	anm_set_rotation_axis(nodes[NODE_LEFT_LOWER_LEG], DEG_TO_RAD(-90), 1, 0, 0, 500);
+	anm_set_rotation_axis(nodes[NODE_LEFT_LOWER_LEG], DEG_TO_RAD(-10), 1, 0, 0, 1000);
+	anm_set_rotation_axis(nodes[NODE_LEFT_LOWER_LEG], DEG_TO_RAD(0), 1, 0, 0, 2000);
 
-	anm_set_rotation(nodes[NODE_RIGHT_LOWER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(-10), 1, 0, 0), 0);
-	anm_set_rotation(nodes[NODE_RIGHT_LOWER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 1000);
-	anm_set_rotation(nodes[NODE_RIGHT_LOWER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(-90), 1, 0, 0), 1500);
-	anm_set_rotation(nodes[NODE_RIGHT_LOWER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(-10), 1, 0, 0), 2000);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_LOWER_LEG], DEG_TO_RAD(-10), 1, 0, 0, 0);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_LOWER_LEG], DEG_TO_RAD(0), 1, 0, 0, 1000);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_LOWER_LEG], DEG_TO_RAD(-90), 1, 0, 0, 1500);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_LOWER_LEG], DEG_TO_RAD(-10), 1, 0, 0, 2000);
 
 	/* head animation */
-	anm_set_rotation(nodes[NODE_HEAD], quat_rotate(quat_identity(), DEG_TO_RAD(-10), 0, 1, 0), 0);
-	anm_set_rotation(nodes[NODE_HEAD], quat_rotate(quat_identity(), DEG_TO_RAD(10), 0, 1, 0), 1000);
-	anm_set_rotation(nodes[NODE_HEAD], quat_rotate(quat_identity(), DEG_TO_RAD(-10), 0, 1, 0), 2000);
+	anm_set_rotation_axis(nodes[NODE_HEAD], DEG_TO_RAD(-10), 0, 1, 0, 0);
+	anm_set_rotation_axis(nodes[NODE_HEAD], DEG_TO_RAD(10), 0, 1, 0, 1000);
+	anm_set_rotation_axis(nodes[NODE_HEAD], DEG_TO_RAD(-10), 0, 1, 0, 2000);
 
 	/* torso animation */
-	anm_set_rotation(nodes[NODE_TORSO], quat_rotate(quat_identity(), DEG_TO_RAD(-8), 1, 0, 0), 0);
-	anm_set_rotation(nodes[NODE_TORSO], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 500);
-	anm_set_rotation(nodes[NODE_TORSO], quat_rotate(quat_identity(), DEG_TO_RAD(-8), 1, 0, 0), 1000);
-	anm_set_rotation(nodes[NODE_TORSO], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 1500);
-	anm_set_rotation(nodes[NODE_TORSO], quat_rotate(quat_identity(), DEG_TO_RAD(-8), 1, 0, 0), 2000);
+	anm_set_rotation_axis(nodes[NODE_TORSO], DEG_TO_RAD(-8), 1, 0, 0, 0);
+	anm_set_rotation_axis(nodes[NODE_TORSO], DEG_TO_RAD(0), 1, 0, 0, 500);
+	anm_set_rotation_axis(nodes[NODE_TORSO], DEG_TO_RAD(-8), 1, 0, 0, 1000);
+	anm_set_rotation_axis(nodes[NODE_TORSO], DEG_TO_RAD(0), 1, 0, 0, 1500);
+	anm_set_rotation_axis(nodes[NODE_TORSO], DEG_TO_RAD(-8), 1, 0, 0, 2000);
 
 	/* upper arm animation */
-	anm_set_rotation(nodes[NODE_LEFT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(30), 1, 0, 0), 0);
-	anm_set_rotation(nodes[NODE_LEFT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(-25), 1, 0, 0), 1000);
-	anm_set_rotation(nodes[NODE_LEFT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(30), 1, 0, 0), 2000);
+	anm_set_rotation_axis(nodes[NODE_LEFT_UPPER_ARM], DEG_TO_RAD(30), 1, 0, 0, 0);
+	anm_set_rotation_axis(nodes[NODE_LEFT_UPPER_ARM], DEG_TO_RAD(-25), 1, 0, 0, 1000);
+	anm_set_rotation_axis(nodes[NODE_LEFT_UPPER_ARM], DEG_TO_RAD(30), 1, 0, 0, 2000);
 
-	anm_set_rotation(nodes[NODE_RIGHT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(-25), 1, 0, 0), 0);
-	anm_set_rotation(nodes[NODE_RIGHT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(30), 1, 0, 0), 1000);
-	anm_set_rotation(nodes[NODE_RIGHT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(-25), 1, 0, 0), 2000);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_UPPER_ARM], DEG_TO_RAD(-25), 1, 0, 0, 0);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_UPPER_ARM], DEG_TO_RAD(30), 1, 0, 0, 1000);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_UPPER_ARM], DEG_TO_RAD(-25), 1, 0, 0, 2000);
 
 	/* lower arm animation */
-	anm_set_rotation(nodes[NODE_LEFT_LOWER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(40), 1, 0, 0), 0);
-	anm_set_rotation(nodes[NODE_LEFT_LOWER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 1000);
-	anm_set_rotation(nodes[NODE_LEFT_LOWER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 1500);
-	anm_set_rotation(nodes[NODE_LEFT_LOWER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(40), 1, 0, 0), 2000);
+	anm_set_rotation_axis(nodes[NODE_LEFT_LOWER_ARM], DEG_TO_RAD(40), 1, 0, 0, 0);
+	anm_set_rotation_axis(nodes[NODE_LEFT_LOWER_ARM], DEG_TO_RAD(0), 1, 0, 0, 1000);
+	anm_set_rotation_axis(nodes[NODE_LEFT_LOWER_ARM], DEG_TO_RAD(0), 1, 0, 0, 1500);
+	anm_set_rotation_axis(nodes[NODE_LEFT_LOWER_ARM], DEG_TO_RAD(40), 1, 0, 0, 2000);
 
-	anm_set_rotation(nodes[NODE_RIGHT_LOWER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 0);
-	anm_set_rotation(nodes[NODE_RIGHT_LOWER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 500);
-	anm_set_rotation(nodes[NODE_RIGHT_LOWER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(40), 1, 0, 0), 1000);
-	anm_set_rotation(nodes[NODE_RIGHT_LOWER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 2000);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_LOWER_ARM], DEG_TO_RAD(0), 1, 0, 0, 0);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_LOWER_ARM], DEG_TO_RAD(0), 1, 0, 0, 500);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_LOWER_ARM], DEG_TO_RAD(40), 1, 0, 0, 1000);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_LOWER_ARM], DEG_TO_RAD(0), 1, 0, 0, 2000);
 }
 
 static void set_jump_animation(int idx)
 {
 	int i;
+	float *vptr;
 
 	anm_use_animation(root, idx);
 	anm_set_active_animation_name(root, "jump");
@@ -200,40 +203,41 @@ static void set_jump_animation(int idx)
 		anm_set_extrapolator(nodes[i], ANM_EXTRAP_REPEAT);
 	}
 
-	anm_set_rotation(nodes[NODE_LEFT_UPPER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 0);
-	anm_set_rotation(nodes[NODE_LEFT_UPPER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(40), 1, 0, 0), 1000);
-	anm_set_rotation(nodes[NODE_LEFT_UPPER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 1500);
-	anm_set_rotation(nodes[NODE_LEFT_UPPER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 2000);
-	anm_set_rotation(nodes[NODE_RIGHT_UPPER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 0);
-	anm_set_rotation(nodes[NODE_RIGHT_UPPER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(40), 1, 0, 0), 1000);
-	anm_set_rotation(nodes[NODE_RIGHT_UPPER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 1500);
-	anm_set_rotation(nodes[NODE_RIGHT_UPPER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 2000);
+	anm_set_rotation_axis(nodes[NODE_LEFT_UPPER_LEG], DEG_TO_RAD(0), 1, 0, 0, 0);
+	anm_set_rotation_axis(nodes[NODE_LEFT_UPPER_LEG], DEG_TO_RAD(40), 1, 0, 0, 1000);
+	anm_set_rotation_axis(nodes[NODE_LEFT_UPPER_LEG], DEG_TO_RAD(0), 1, 0, 0, 1500);
+	anm_set_rotation_axis(nodes[NODE_LEFT_UPPER_LEG], DEG_TO_RAD(0), 1, 0, 0, 2000);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_UPPER_LEG], DEG_TO_RAD(0), 1, 0, 0, 0);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_UPPER_LEG], DEG_TO_RAD(40), 1, 0, 0, 1000);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_UPPER_LEG], DEG_TO_RAD(0), 1, 0, 0, 1500);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_UPPER_LEG], DEG_TO_RAD(0), 1, 0, 0, 2000);
 
-	anm_set_rotation(nodes[NODE_LEFT_LOWER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 0);
-	anm_set_rotation(nodes[NODE_LEFT_LOWER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(-80), 1, 0, 0), 1000);
-	anm_set_rotation(nodes[NODE_LEFT_LOWER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 1500);
-	anm_set_rotation(nodes[NODE_LEFT_LOWER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 2000);
-	anm_set_rotation(nodes[NODE_RIGHT_LOWER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 0);
-	anm_set_rotation(nodes[NODE_RIGHT_LOWER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(-80), 1, 0, 0), 1000);
-	anm_set_rotation(nodes[NODE_RIGHT_LOWER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 1500);
-	anm_set_rotation(nodes[NODE_RIGHT_LOWER_LEG], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 2000);
+	anm_set_rotation_axis(nodes[NODE_LEFT_LOWER_LEG], DEG_TO_RAD(0), 1, 0, 0, 0);
+	anm_set_rotation_axis(nodes[NODE_LEFT_LOWER_LEG], DEG_TO_RAD(-80), 1, 0, 0, 1000);
+	anm_set_rotation_axis(nodes[NODE_LEFT_LOWER_LEG], DEG_TO_RAD(0), 1, 0, 0, 1500);
+	anm_set_rotation_axis(nodes[NODE_LEFT_LOWER_LEG], DEG_TO_RAD(0), 1, 0, 0, 2000);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_LOWER_LEG], DEG_TO_RAD(0), 1, 0, 0, 0);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_LOWER_LEG], DEG_TO_RAD(-80), 1, 0, 0, 1000);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_LOWER_LEG], DEG_TO_RAD(0), 1, 0, 0, 1500);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_LOWER_LEG], DEG_TO_RAD(0), 1, 0, 0, 2000);
 
-	anm_set_position(nodes[NODE_TORSO], parts[NODE_TORSO].pos, 0);
-	anm_set_position(nodes[NODE_TORSO], v3_add(parts[NODE_TORSO].pos, v3_cons(0, -1, 0)), 1000);
-	anm_set_position(nodes[NODE_TORSO], v3_add(parts[NODE_TORSO].pos, v3_cons(0, 2, 0)), 1500);
-	anm_set_position(nodes[NODE_TORSO], parts[NODE_TORSO].pos, 2000);
+	vptr = parts[NODE_TORSO].pos;
+	anm_set_position(nodes[NODE_TORSO], vptr, 0);
+	anm_set_position3f(nodes[NODE_TORSO], vptr[0], vptr[1] - 1, vptr[2], 1000);
+	anm_set_position3f(nodes[NODE_TORSO], vptr[0], vptr[1] + 2, vptr[2], 1500);
+	anm_set_position(nodes[NODE_TORSO], vptr, 2000);
 
-	anm_set_rotation(nodes[NODE_LEFT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 0);
-	anm_set_rotation(nodes[NODE_LEFT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(-20), 1, 0, 0), 1000);
-	anm_set_rotation(nodes[NODE_LEFT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(20), 1, 0, 0), 1200);
-	anm_set_rotation(nodes[NODE_LEFT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(170), 1, 0, 0), 1500);
-	anm_set_rotation(nodes[NODE_LEFT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 2000);
+	anm_set_rotation_axis(nodes[NODE_LEFT_UPPER_ARM], DEG_TO_RAD(0), 1, 0, 0, 0);
+	anm_set_rotation_axis(nodes[NODE_LEFT_UPPER_ARM], DEG_TO_RAD(-20), 1, 0, 0, 1000);
+	anm_set_rotation_axis(nodes[NODE_LEFT_UPPER_ARM], DEG_TO_RAD(20), 1, 0, 0, 1200);
+	anm_set_rotation_axis(nodes[NODE_LEFT_UPPER_ARM], DEG_TO_RAD(170), 1, 0, 0, 1500);
+	anm_set_rotation_axis(nodes[NODE_LEFT_UPPER_ARM], DEG_TO_RAD(0), 1, 0, 0, 2000);
 
-	anm_set_rotation(nodes[NODE_RIGHT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 0);
-	anm_set_rotation(nodes[NODE_RIGHT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(-20), 1, 0, 0), 1000);
-	anm_set_rotation(nodes[NODE_RIGHT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(20), 1, 0, 0), 1200);
-	anm_set_rotation(nodes[NODE_RIGHT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(170), 1, 0, 0), 1500);
-	anm_set_rotation(nodes[NODE_RIGHT_UPPER_ARM], quat_rotate(quat_identity(), DEG_TO_RAD(0), 1, 0, 0), 2000);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_UPPER_ARM], DEG_TO_RAD(0), 1, 0, 0, 0);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_UPPER_ARM], DEG_TO_RAD(-20), 1, 0, 0, 1000);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_UPPER_ARM], DEG_TO_RAD(20), 1, 0, 0, 1200);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_UPPER_ARM], DEG_TO_RAD(170), 1, 0, 0, 1500);
+	anm_set_rotation_axis(nodes[NODE_RIGHT_UPPER_ARM], DEG_TO_RAD(0), 1, 0, 0, 2000);
 }
 
 void disp(void)
@@ -258,23 +262,17 @@ void disp(void)
 	glTranslatef(-2.5, 0, 0);
 
 	for(i=0; i<NUM_NODES; i++) {
-		float color[4] = {0, 0, 0, 1};
-		mat4_t xform, xform_transp;
+		float xform[16];
 
-		color[0] = parts[i].color.x;
-		color[1] = parts[i].color.y;
-		color[2] = parts[i].color.z;
-
-		glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, color);
-		glColor4fv(color);
+		glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, parts[i].color);
+		glColor4fv(parts[i].color);
 
 		anm_get_matrix(nodes[i], xform, msec);
-		m4_transpose(xform_transp, xform);
 
 		glPushMatrix();
-		glMultMatrixf((float*)xform_transp);
+		glMultMatrixf(xform);
 
-		glScalef(parts[i].sz.x, parts[i].sz.y, parts[i].sz.z);
+		glScalef(parts[i].sz[0], parts[i].sz[1], parts[i].sz[2]);
 		glutSolidCube(1.0);
 
 		glPopMatrix();
@@ -288,22 +286,13 @@ void disp(void)
 	anm_eval(nodes[NODE_TORSO], msec);	/* calculate all matrices recursively */
 
 	for(i=0; i<NUM_NODES; i++) {
-		float color[4] = {0, 0, 0, 1};
-		mat4_t xform_transp;
-
-		color[0] = parts[i].color.x;
-		color[1] = parts[i].color.y;
-		color[2] = parts[i].color.z;
-
-		glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, color);
-		glColor4fv(color);
-
-		m4_transpose(xform_transp, nodes[i]->matrix);
+		glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, parts[i].color);
+		glColor4fv(parts[i].color);
 
 		glPushMatrix();
-		glMultMatrixf((float*)xform_transp);
+		glMultMatrixf(nodes[i]->matrix);
 
-		glScalef(parts[i].sz.x, parts[i].sz.y, parts[i].sz.z);
+		glScalef(parts[i].sz[0], parts[i].sz[1], parts[i].sz[2]);
 		glutSolidCube(1.0);
 
 		glPopMatrix();

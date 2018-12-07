@@ -3,7 +3,7 @@ obj = $(src:.c=.o)
 bin = test
 
 CFLAGS = -pedantic -Wall -g -I../src
-LDFLAGS = -L.. -lanim -lvmath $(libgl) -lm -lpthread
+LDFLAGS = ../libanim.a $(libgl) -lm
 
 ifeq ($(shell uname -s), Darwin)
 	libgl = -framework OpenGL -framework GLUT

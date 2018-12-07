@@ -7,7 +7,6 @@ PTHREAD=no
 
 config_h=src/config.h
 
-#echo "configuring libanim $VERSION ..."
 
 for arg; do
 	case "$arg" in
@@ -61,6 +60,9 @@ if [ "$OPT" = 'yes' ]; then
 fi
 if [ "$PTHREAD" = yes ]; then
 	echo 'pthr = -lpthread' >>Makefile
+	echo 'name = anim-mt' >>Makefile
+else
+	echo 'name = anim' >>Makefile
 fi
 
 cat Makefile.in >>Makefile
@@ -76,10 +78,5 @@ else
 fi
 echo >>src/config.h
 echo '#endif	/* ANIM_CONFIG_H_ */'>>src/config.h
-
-#echo 'creating pkg-config file ...'
-#echo "prefix=$PREFIX" >vmath.pc
-#echo "ver=$VERSION" >>vmath.pc
-#cat vmath.pc.in >>vmath.pc
 
 echo 'configuration completed, type make (or gmake) to build.'

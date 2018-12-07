@@ -1,0 +1,9 @@
+*.d
+*.o
+*.swp
+libanim.a
+libanim-mt.a
+libanim.so*
+libanim-mt.so*
+libanim.dylib
+Makefile
