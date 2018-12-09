@@ -4,31 +4,34 @@ obj = $(src:.c=.o)
 dep = $(obj:.o=.d)
 lib_a = lib$(name).a
 
-somajor = 1
-sominor = 0
+abi = 1
+rev = 0
 
-sys := $(patsubst MINGW32%,MINGW32,$(shell uname -s))
+sys := $(shell uname -s | sed 's/MINGW.*/mingw/')
 ifeq ($(sys), Darwin)
 	lib_so = lib$(name).dylib
 	shared = -dynamiclib
-else ifeq ($(sys), MINGW32)
+	sodir = lib
+
+else ifeq ($(sys), mingw)
 	lib_so = lib$(name).dll
 	shared = -shared
+	sodir = bin
+
 else
-	soname = lib$(name).so.$(somajor)
-	lib_so = lib$(name).so.$(somajor).$(sominor)
+	soname = lib$(name).so.$(abi)
+	lib_so = lib$(name).so.$(abi).$(rev)
 	ldname = lib$(name).so
 	shared = -shared -Wl,-soname,$(soname)
 	pic = -fPIC
+	sodir = lib
 endif
 
-
-AR = ar
-CFLAGS = $(opt) $(dbg) -pedantic -Wall $(pic)
+CFLAGS = -pedantic -Wall $(opt) $(dbg) $(pic)
 LDFLAGS = -lm $(pthr)
 
 .PHONY: all
-all: $(lib_a) $(lib_so)
+all: $(lib_a) $(lib_so) $(soname) $(ldname)
 
 $(lib_a): $(obj)
 	$(AR) rcs $@ $(obj)
@@ -36,26 +39,40 @@ $(lib_a): $(obj)
 $(lib_so): $(obj)
 	$(CC) $(shared) -o $@ $(obj) $(LDFLAGS)
 
+$(soname): $(lib_so)
+	rm -f $@
+	ln -s $< $@
+
+$(ldname): $(soname)
+	rm -f $@
+	ln -s $< $@
+
 -include $(dep)
 
 %.d: %.c
+	@echo "generating depfile $< -> $@"
 	@$(CPP) $(CFLAGS) $< -MM -MT $(@:.d=.o) >$@
 
 .PHONY: install
 install: $(lib_a) $(lib_so)
-	mkdir -p $(DESTDIR)$(PREFIX)/lib $(DESTDIR)$(PREFIX)/include/$(name)
+	mkdir -p $(DESTDIR)$(PREFIX)/lib
+	mkdir -p $(DESTDIR)$(PREFIX)/$(sodir)
+	mkdir -p $(DESTDIR)$(PREFIX)/include/$(name)
 	cp $(lib_a) $(DESTDIR)$(PREFIX)/lib/$(lib_a)
-	cp $(lib_so) $(DESTDIR)$(PREFIX)/lib/$(lib_so)
+	cp $(lib_so) $(DESTDIR)$(PREFIX)/$(sodir)/$(lib_so)
 	[ -n "$(ldname)" ] && \
-		rm -f $(DESTDIR)$(PREFIX)/lib/$(soname) $(DESTDIR)$(PREFIX)/lib/$(ldname) && \
-		ln -s $(DESTDIR)$(PREFIX)/lib/$(lib_so) $(DESTDIR)$(PREFIX)/lib/$(soname) && \
-		ln -s $(DESTDIR)$(PREFIX)/lib/$(soname) $(DESTDIR)$(PREFIX)/lib/$(ldname) || true
+		cd $(DESTDIR)$(PREFIX)/$(sodir) && rm -f $(soname) $(ldname) && \
+		ln -s $(lib_so) $(soname) && \
+		ln -s $(soname) $(ldname) || true
 	cp $(hdr) $(DESTDIR)$(PREFIX)/include/$(name)/
 
 .PHONY: uninstall
 uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/lib/$(lib_a)
-	rm -f $(DESTDIR)$(PREFIX)/lib/$(lib_so)
+	rm -f $(DESTDIR)$(PREFIX)/$(sodir)/$(lib_so)
+	[ -n "$(ldname)" ] && \
+		rm -f $(DESTDIR)$(PREFIX)/$(sodir)/$(soname) && \
+		rm -f $(DESTDIR)$(PREFIX)/$(sodir)/$(ldname) || true
 	rm -f $(DESTDIR)$(PREFIX)/include/$(name)/track.h
 	rm -f $(DESTDIR)$(PREFIX)/include/$(name)/anim.h
 	rm -f $(DESTDIR)$(PREFIX)/include/$(name)/config.h
@@ -63,4 +80,4 @@ uninstall:
 
 .PHONY: clean
 clean:
-	rm -f $(obj) $(lib_so) $(lib_a)
+	rm -f $(obj) $(lib_so) $(lib_a) $(soname) $(ldname)

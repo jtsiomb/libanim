@@ -30,3 +30,19 @@ This program is free software. You may use, modify, and redistribute it under
 the terms of the GNU Lesser General Public License v3 or (at your option), any
 later version published by the Free Software Foundation. See COPYING and
 COPYING.LESSER for details.
+
+Build
+-----
+To build and install libanim on UNIX, run the usual:
+
+    ./configure
+    make
+    make install
+
+See `./configure --help` for a complete list of build-time options.
+
+To cross-compile for windows with mingw-w64, try the following incantation:
+
+    ./configure --prefix=/usr/i686-w64-mingw32
+    make CC=i686-w64-mingw32-gcc AR=i686-w64-mingw32-ar sys=mingw
+    make install sys=mingw

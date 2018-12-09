@@ -49,6 +49,7 @@ done
 echo "prefix: $PREFIX"
 echo "optimize for speed: $OPT"
 echo "include debugging symbols: $DBG"
+echo "multi-threading safe: $PTHREAD"
 
 echo 'creating makefile ...'
 echo "PREFIX = $PREFIX" >Makefile
