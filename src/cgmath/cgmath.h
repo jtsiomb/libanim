@@ -124,8 +124,8 @@ static inline void cgm_qnormalize(cgm_quat *q);
 static inline void cgm_qconjugate(cgm_quat *q);
 static inline void cgm_qinvert(cgm_quat *q);
 
-static inline void cgm_qrotation(cgm_quat *q, const cgm_vec3 *axis, float angle);
-static inline void cgm_qrotate(cgm_quat *q, const cgm_vec3 *axis, float angle);
+static inline void cgm_qrotation(cgm_quat *q, float angle, float x, float y, float z);
+static inline void cgm_qrotate(cgm_quat *q, float angle, float x, float y, float z);
 
 static inline void cgm_qslerp(cgm_quat *res, const cgm_quat *a, const cgm_quat *b, float t);
 static inline void cgm_qlerp(cgm_quat *res, const cgm_quat *a, const cgm_quat *b, float t);
@@ -208,6 +208,7 @@ static inline float cgm_deg_to_rad(float deg);
 static inline float cgm_rad_to_deg(float rad);
 
 static inline float cgm_smoothstep(float a, float b, float x);
+static inline float cgm_lerp(float a, float b, float t);
 static inline float cgm_bezier(float a, float b, float c, float d, float t);
 
 static inline void cgm_discrand(cgm_vec3 *v, float rad);
