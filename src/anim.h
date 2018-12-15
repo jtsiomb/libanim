@@ -84,6 +84,8 @@ struct anm_node {
 	struct anm_node *parent;
 	struct anm_node *child;
 	struct anm_node *next;
+
+	void *data;	/* user data pointer */
 };
 
 #ifdef __cplusplus
