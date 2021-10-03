@@ -78,11 +78,11 @@ int anm_init_node(struct anm_node *node)
 
 	node->cur_anim[1] = -1;
 
-	if(!(node->animations = dynarr_alloc(1, sizeof *node->animations))) {
+	if(!(node->animations = anm_dynarr_alloc(1, sizeof *node->animations))) {
 		return -1;
 	}
 	if(anm_init_animation(node->animations) == -1) {
-		dynarr_free(node->animations);
+		anm_dynarr_free(node->animations);
 		return -1;
 	}
 
@@ -104,7 +104,7 @@ void anm_destroy_node(struct anm_node *node)
 	for(i=0; i<num_anim; i++) {
 		anm_destroy_animation(node->animations + i);
 	}
-	dynarr_free(node->animations);
+	anm_dynarr_free(node->animations);
 
 #ifdef ANIM_THREAD_SAFE
 	/* destroy thread-specific cache */
@@ -366,7 +366,7 @@ float anm_get_active_animation_mix(const struct anm_node *node)
 
 int anm_get_animation_count(const struct anm_node *node)
 {
-	return dynarr_size(node->animations);
+	return anm_dynarr_size(node->animations);
 }
 
 int anm_add_node_animation(struct anm_node *node)
@@ -374,7 +374,7 @@ int anm_add_node_animation(struct anm_node *node)
 	struct anm_animation newanim;
 	anm_init_animation(&newanim);
 
-	node->animations = dynarr_push(node->animations, &newanim);
+	node->animations = anm_dynarr_push(node->animations, &newanim);
 	return 0;
 }
 

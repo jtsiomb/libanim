@@ -32,7 +32,7 @@ struct arrdesc {
 
 #define DESC(x)		((struct arrdesc*)((char*)(x) - sizeof(struct arrdesc)))
 
-void *dynarr_alloc(int elem, int szelem)
+void *anm_dynarr_alloc(int elem, int szelem)
 {
 	struct arrdesc *desc;
 
@@ -45,14 +45,14 @@ void *dynarr_alloc(int elem, int szelem)
 	return (char*)desc + sizeof *desc;
 }
 
-void dynarr_free(void *da)
+void anm_dynarr_free(void *da)
 {
 	if(da) {
 		free(DESC(da));
 	}
 }
 
-void *dynarr_resize(void *da, int elem)
+void *anm_dynarr_resize(void *da, int elem)
 {
 	int newsz;
 	void *tmp;
@@ -73,19 +73,19 @@ void *dynarr_resize(void *da, int elem)
 	return (char*)desc + sizeof *desc;
 }
 
-int dynarr_empty(void *da)
+int anm_dynarr_empty(void *da)
 {
 	return DESC(da)->nelem ? 0 : 1;
 }
 
-int dynarr_size(void *da)
+int anm_dynarr_size(void *da)
 {
 	return DESC(da)->nelem;
 }
 
 
 /* stack semantics */
-void *dynarr_push(void *da, void *item)
+void *anm_dynarr_push(void *da, void *item)
 {
 	struct arrdesc *desc;
 	int nelem;
@@ -98,7 +98,7 @@ void *dynarr_push(void *da, void *item)
 		struct arrdesc *tmp;
 		int newsz = desc->max_elem ? desc->max_elem * 2 : 1;
 
-		if(!(tmp = dynarr_resize(da, newsz))) {
+		if(!(tmp = anm_dynarr_resize(da, newsz))) {
 			fprintf(stderr, "failed to resize\n");
 			return da;
 		}
@@ -111,7 +111,7 @@ void *dynarr_push(void *da, void *item)
 	return da;
 }
 
-void *dynarr_pop(void *da)
+void *anm_dynarr_pop(void *da)
 {
 	struct arrdesc *desc;
 	int nelem;
@@ -126,7 +126,7 @@ void *dynarr_pop(void *da)
 		struct arrdesc *tmp;
 		int newsz = desc->max_elem / 2;
 
-		if(!(tmp = dynarr_resize(da, newsz))) {
+		if(!(tmp = anm_dynarr_resize(da, newsz))) {
 			fprintf(stderr, "failed to resize\n");
 			return da;
 		}
